@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+dist/
+build/
+*.spec
+corporate_serf_data.json
+.DS_Store
+Thumbs.db
