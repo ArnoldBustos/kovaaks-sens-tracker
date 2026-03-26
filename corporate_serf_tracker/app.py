@@ -1,16 +1,21 @@
+import threading
 import os
 import tkinter as tk
 from collections import defaultdict
 from pathlib import Path
 from tkinter import filedialog
 from tkinter import ttk
+import matplotlib
+matplotlib.use("TkAgg")
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from .analysis import calc_median, estimate_best_cm, estimate_worst_cm, recommend_next_cm
 from .constants import ACCENT, ACCENT2, BG, BG2, BG3, BORDER, CM_OPTIONS, DEFAULT_STATS_PATH, GOLD, MAX_SELECTED, MUTED, TEXT, TEXT2, WARN, WORST_BG, WORST_COL
 from .formatting import fmt_score, fmt_ts, get_effective_cm
 from .parsing import load_folder
 from .storage import load_data, save_data
-
 
 class App(tk.Tk):
     def __init__(self):
@@ -27,6 +32,7 @@ class App(tk.Tk):
         self.show_all_cm = tk.BooleanVar(value=False)
         self._table_collapsed = {}
         self._plays_collapsed = {}
+        self._chart_collapsed = {}
         self.last_8_only = tk.BooleanVar(value=False)
         self._active_tab_name: str = ""
 
@@ -122,7 +128,7 @@ class App(tk.Tk):
 
     # ── UI Layout ─────────────────────────────────────────────────────────────
     def _build_ui(self):
-        topbar = tk.Frame(self, bg=BG2, height=52)
+        topbar = tk.Frame(self, bg="#0a0a0a", height=52)
         topbar.pack(fill="x", side="top")
         topbar.pack_propagate(False)
 
@@ -352,6 +358,7 @@ class App(tk.Tk):
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
         self._build_stats_bar(inner, name, plays, assignments)
+        self._build_chart_section(inner, name, plays, assignments)
         self._build_sens_table(inner, name, plays, assignments, ranks)
         self._build_tag_section(inner, name, plays, assignments)
 
@@ -406,7 +413,7 @@ class App(tk.Tk):
         inner.pack(fill="x", padx=14, pady=8)
 
         # respects range filter + hidden cms
-        hidden = self._hidden_cms.get(os.name, set())
+        hidden = self._hidden_cms.get(name, set())
 
         def _play_visible(p):
             cm = get_effective_cm(p, assignments)
@@ -460,7 +467,7 @@ class App(tk.Tk):
         stats = [
           ("OVERALL BEST", fmt_score(best), GOLD),
           ("CM FOR BEST", f"{cm_of_best} cm" if cm_of_best else "—", ACCENT),
-          ("BEST XHAIR", best_crosshair_label, ACCENT),
+          ("BEST CROSSHAIR", best_crosshair_label, ACCENT),
           ("MEDIAN", fmt_score(median), TEXT),
           ("TOTAL PLAYS", str(len(plays)), TEXT),
           ("EST. BEST CM", "Need more data", ACCENT2),
@@ -987,6 +994,166 @@ class App(tk.Tk):
                         bg=row_bg, fg=WARN).pack(side="left")
                 cb.bind("<<ComboboxSelected>>",
                     lambda e, n=name, f=fn, v=cm_var: self._assign_play(n, f, v))
+
+    def _build_chart_section(self, parent, name, plays, assignments):
+        outer = tk.Frame(parent, bg=BG2, bd=1, relief="solid")
+        outer.pack(fill="x", padx=16, pady=6)
+
+        is_collapsed = self._chart_collapsed.get(name, False)
+
+        hdr_bar = tk.Frame(outer, bg=BG3, cursor="hand2")
+        hdr_bar.pack(fill="x")
+        arrow = "▶" if is_collapsed else "▼"
+        hdr_lbl = tk.Label(hdr_bar,
+            text=f"  {arrow}  CM/360 SCORE CHART",
+            font=("Consolas", 9, "bold"), bg=BG3, fg=ACCENT, anchor="w", pady=6)
+        hdr_lbl.pack(side="left", padx=4)
+        hdr_hint = tk.Label(hdr_bar, text="click to collapse",
+            font=("Segoe UI", 7), bg=BG3, fg=MUTED, anchor="e")
+        hdr_hint.pack(side="right", padx=8)
+
+        chart_frame = tk.Frame(outer, bg=BG2)
+        if not is_collapsed:
+            chart_frame.pack(fill="x")
+
+        def _toggle(e=None):
+            self._chart_collapsed[name] = not self._chart_collapsed.get(name, False)
+            if self._chart_collapsed[name]:
+                chart_frame.pack_forget()
+                hdr_lbl.config(text="  ▶  CM/360 SCORE CHART")
+            else:
+                chart_frame.pack(fill="x")
+                hdr_lbl.config(text="  ▼  CM/360 SCORE CHART")
+
+        hdr_bar.bind("<Button-1>", _toggle)
+        hdr_lbl.bind("<Button-1>", _toggle)
+        hdr_hint.bind("<Button-1>", _toggle)
+
+        # ── Build data ───────────────────────────────────────────────────────────
+        hidden = self._hidden_cms.get(name, set())
+        byCm = defaultdict(list)
+        for p in plays:
+            cm = get_effective_cm(p, assignments)
+            if cm is not None:
+                byCm[cm].append(p["score"])
+        if self.last_8_only.get():
+            byCm = defaultdict(list, {cm: scores[-8:] for cm, scores in byCm.items()})
+
+        visible_cms = sorted(
+            cm for cm in byCm
+            if self._cm_in_range(cm) and cm not in hidden
+        )
+
+        if not visible_cms:
+            tk.Label(chart_frame,
+                text="No data to chart with current filters.",
+                font=("Segoe UI", 9), bg=BG2, fg=MUTED).pack(pady=20)
+            return
+
+        best_scores = [max(byCm[cm]) for cm in visible_cms]
+        cm_bests = dict(zip(visible_cms, best_scores))
+
+        est_cm, est_method = estimate_best_cm(cm_bests)
+        worst_cm, worst_method = estimate_worst_cm(cm_bests)
+
+        # Snap est/worst to nearest actual key for annotation
+        est_cm_key = None
+        if est_cm is not None:
+            est_cm_key = min(cm_bests.keys(), key=lambda c: abs(c - est_cm))
+        worst_cm_key = None
+        if worst_cm is not None:
+            worst_cm_key = min(cm_bests.keys(), key=lambda c: abs(c - worst_cm))
+
+        # ── Matplotlib figure ────────────────────────────────────────────────────
+        n_bars = len(visible_cms)
+        fig_width = max(5, min(n_bars * 1.1, 9))  # scales with data, caps at 9in
+        fig, ax = plt.subplots(figsize=(fig_width, 3.2), dpi=96)
+
+        fig.patch.set_facecolor(BG2)
+        ax.set_facecolor(BG2)
+
+        x_pos = list(range(len(visible_cms)))
+        bar_colors = []
+        for cm in visible_cms:
+            if est_cm_key is not None and cm == est_cm_key:
+                bar_colors.append(GOLD)
+            elif worst_cm_key is not None and cm == worst_cm_key:
+                bar_colors.append(WORST_COL)
+            else:
+                bar_colors.append(ACCENT)
+
+        bars = ax.bar(x_pos, best_scores, color=bar_colors,
+                    width=0.6, zorder=2, linewidth=0)
+
+        # Score labels on top of bars
+        score_range = max(best_scores) - min(best_scores) if len(best_scores) > 1 else max(best_scores)
+        label_offset = max(best_scores) * 0.012
+        for rect, score in zip(bars, best_scores):
+            ax.text(rect.get_x() + rect.get_width() / 2,
+                    rect.get_height() + label_offset,
+                    str(int(score)),
+                    ha="center", va="bottom",
+                    color=TEXT2, fontsize=7,
+                    fontfamily="Consolas")
+
+        # Est. best vertical marker
+        if est_cm_key is not None:
+            xi = visible_cms.index(est_cm_key)
+            ax.axvline(xi, color=GOLD, linewidth=1.5, linestyle="--",
+                    zorder=3, alpha=0.85)
+            ax.text(xi + 0.1, max(best_scores) * 0.97,
+                    f"est. best\n~{est_cm:.4g} cm",
+                    color=GOLD, fontsize=7, va="top",
+                    fontfamily="Consolas")
+
+        # Worst cm vertical marker (only if different from est best)
+        if worst_cm_key is not None and worst_cm_key != est_cm_key:
+            xi = visible_cms.index(worst_cm_key)
+            ax.axvline(xi, color=WORST_COL, linewidth=1.5, linestyle=":",
+                    zorder=3, alpha=0.85)
+            ax.text(xi + 0.1, max(best_scores) * 0.80,
+                    f"worst\n~{worst_cm:.4g} cm",
+                    color=WORST_COL, fontsize=7, va="top",
+                    fontfamily="Consolas")
+
+        # Axes styling
+        ax.set_xticks(x_pos)
+        ax.set_xticklabels([f"{cm:.4g}" for cm in visible_cms],
+                        color=TEXT2, fontsize=7.5, fontfamily="Consolas")
+        ax.set_ylabel("Best Score", color=TEXT2, fontsize=8)
+        ax.set_xlabel("cm / 360", color=TEXT2, fontsize=8)
+        ax.tick_params(colors=TEXT2, length=3)
+        ax.tick_params(axis="y", colors=TEXT2)
+        for spine in ax.spines.values():
+            spine.set_color(BG3)
+        ax.set_ylim(
+            bottom=max(0, min(best_scores) * 0.92),
+            top=max(best_scores) * 1.12
+        )
+        ax.grid(axis="y", color=BG3, linewidth=0.8, zorder=0)
+        ax.set_axisbelow(True)
+
+        # Legend
+        legend_handles = [
+            mpatches.Patch(color=GOLD,
+                label=f"Est. best  (~{est_cm:.4g} cm  {est_method})" if est_cm else "Est. best"),
+            mpatches.Patch(color=WORST_COL,
+                label=f"Worst      (~{worst_cm:.4g} cm  {worst_method})" if worst_cm else "Worst"),
+            mpatches.Patch(color=ACCENT,
+                label="Other tested cm"),
+        ]
+        ax.legend(handles=legend_handles, loc="lower right",
+                facecolor=BG3, edgecolor=BG3,
+                labelcolor=TEXT2, fontsize=7)
+
+        fig.tight_layout(pad=1.2)
+
+        canvas_widget = FigureCanvasTkAgg(fig, master=chart_frame)
+        canvas_widget.draw()
+        canvas_widget.get_tk_widget().pack(anchor="w", padx=16, pady=(4, 8))
+
+        # Prevent matplotlib memory leak on rebuild
+        chart_frame.bind("<Destroy>", lambda e: plt.close(fig))
 
     def _assign_play(self, name, filename, cm_var):
         val = cm_var.get().strip()
