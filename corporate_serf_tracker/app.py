@@ -102,7 +102,7 @@ class App(tk.Tk):
 
         style.configure("TEntry",
             fieldbackground=BG3, foreground=TEXT, insertcolor=TEXT,
-            borderwidth=1, relief="solid")
+            borderwidth=1, relief="solid") 
         style.map("TEntry", fieldbackground=[("focus", BG3)])
 
         style.configure("TCombobox",
@@ -405,9 +405,19 @@ class App(tk.Tk):
         inner = tk.Frame(bar, bg=BG2)
         inner.pack(fill="x", padx=14, pady=8)
 
-        all_scores = [play["score"] for play in plays if play["score"] > 0]
+        # respects range filter + hidden cms
+        hidden = self._hidden_cms.get(os.name, set())
+
+        def _play_visible(p):
+            cm = get_effective_cm(p, assignments)
+            if cm is None:
+                return False
+            return self._cm_in_range(cm) and cm not in hidden
+
+        filtered_plays = [p for p in plays if _play_visible(p)]
+        all_scores = [p["score"] for p in filtered_plays if p["score"] > 0]
         best = max(all_scores) if all_scores else None
-        best_play = next((play for play in plays if play["score"] == best), None) if best else None
+        best_play = next((p for p in filtered_plays if p["score"] == best), None) if best else None
         cm_of_best = get_effective_cm(best_play, assignments) if best_play else None
         best_crosshair_name = best_play.get("crosshair_name") if best_play else None
         best_crosshair_scale = best_play.get("crosshair_scale") if best_play else None
@@ -419,8 +429,6 @@ class App(tk.Tk):
             cm = get_effective_cm(p, assignments)
             if cm is not None:
                 byCm_all[cm].append(p["score"])
-
-        hidden = self._hidden_cms.get(name, set())
 
         def _is_visible_cm(cm):
             return self._cm_in_range(cm) and cm not in hidden
@@ -458,7 +466,7 @@ class App(tk.Tk):
           ("EST. BEST CM", "Need more data", ACCENT2),
         ]
         if est_cm:
-            stats[4] = ("EST. BEST CM", f"~{est_cm} cm  ({est_method})", ACCENT2)
+            stats[5] = ("EST. BEST CM", f"~{est_cm} cm  ({est_method})", ACCENT2)
 
         for label, val, col in stats:
             cell = tk.Frame(inner, bg=BG3, padx=12, pady=8)
