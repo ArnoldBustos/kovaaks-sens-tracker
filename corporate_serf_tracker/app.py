@@ -20,7 +20,7 @@ from .storage import load_data, save_data
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Corporate Serf Tracker — KovaaK's Sensitivity Method")
+        self.title("Kovaaks Sensitivity Performance Tracker")
         self.geometry("1400x820")
         self.minsize(900, 600)
         self.configure(bg=BG)
@@ -137,9 +137,9 @@ class App(tk.Tk):
         topbar.pack(fill="x", side="top")
         topbar.pack_propagate(False)
 
-        tk.Label(topbar, text="CORPORATE SERF TRACKER",
+        tk.Label(topbar, text="Kovaaks Sensitivity Performance Tracker",
             font=("Consolas", 14, "bold"), bg=BG2, fg=ACCENT).pack(side="left", padx=18, pady=12)
-        tk.Label(topbar, text="KovaaK's Sensitivity Method",
+        tk.Label(topbar, text="Inspired by the Corporate Serf method!",
             font=("Segoe UI", 9), bg=BG2, fg=TEXT2).pack(side="left", pady=12)
 
         self.folder_label = tk.Label(topbar, text="Auto-loading default path...",
@@ -403,7 +403,7 @@ class App(tk.Tk):
         tk.Label(f, text="◈", font=("Segoe UI", 48), bg=BG, fg=MUTED).pack()
         tk.Label(f, text="NO SCENARIOS SELECTED", font=("Consolas", 14, "bold"),
             bg=BG, fg=TEXT2).pack(pady=8)
-        tk.Label(f, text="Load your stats folder and select up to 5 scenarios\nfrom the sidebar to begin charting your Corporate Serf sessions.",
+        tk.Label(f, text="Load your stats folder and select up to 5 scenarios\nfrom the sidebar to begin charting your Kovaaks Sensitivity stats.",
             font=("Segoe UI", 9), bg=BG, fg=MUTED, justify="center").pack()
 
     def _refresh_main(self, restore_tab=""):
