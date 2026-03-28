@@ -1,6 +1,8 @@
 from pathlib import Path
 
-DEFAULT_STATS_PATH = r"C:\Program Files (x86)\Steam\steamapps\common\FPSAimTrainer\FPSAimTrainer\stats"
+DEFAULT_STATS_PATH = (
+    r"C:\Program Files (x86)\Steam\steamapps\common\FPSAimTrainer\FPSAimTrainer\stats"
+)
 DATA_FILE = Path(__file__).resolve().parent.parent / "corporate_serf_data.json"
 CM_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
 MAX_SELECTED = 5
