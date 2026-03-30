@@ -5,20 +5,40 @@ from pathlib import Path
 from tkinter import filedialog
 from tkinter import ttk
 import matplotlib
+
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from .analysis import calc_median, estimate_best_cm, estimate_worst_cm, recommend_next_cm
+from .analysis import (
+    calc_median,
+    estimate_best_cm,
+    estimate_worst_cm,
+    recommend_next_cm,
+)
 from .constants import (
-    ACCENT, ACCENT2, BG, BG2, BG3, BORDER, CM_OPTIONS,
-    DEFAULT_STATS_PATH, GOLD, MAX_SELECTED, MUTED,
-    TEXT, TEXT2, WARN, WORST_BG, WORST_COL,
+    ACCENT,
+    ACCENT2,
+    BG,
+    BG2,
+    BG3,
+    BORDER,
+    CM_OPTIONS,
+    DEFAULT_STATS_PATH,
+    GOLD,
+    MAX_SELECTED,
+    MUTED,
+    TEXT,
+    TEXT2,
+    WARN,
+    WORST_BG,
+    WORST_COL,
 )
 from .formatting import fmt_score, fmt_ts, get_effective_cm
 from .parsing import load_folder
 from .storage import load_data, save_data
+
 
 class App(tk.Tk):
     def __init__(self):
@@ -60,89 +80,186 @@ class App(tk.Tk):
 
         style.configure(".", background=BG, foreground=TEXT, font=("Segoe UI", 9))
 
-        style.configure("Treeview",
-            background=BG2, foreground=TEXT, fieldbackground=BG2,
-            borderwidth=0, rowheight=26, font=("Segoe UI", 9))
-        style.configure("Treeview.Heading",
-            background=BG3, foreground=TEXT2, relief="flat",
-            font=("Segoe UI", 8, "bold"))
-        style.map("Treeview",
+        style.configure(
+            "Treeview",
+            background=BG2,
+            foreground=TEXT,
+            fieldbackground=BG2,
+            borderwidth=0,
+            rowheight=26,
+            font=("Segoe UI", 9),
+        )
+        style.configure(
+            "Treeview.Heading",
+            background=BG3,
+            foreground=TEXT2,
+            relief="flat",
+            font=("Segoe UI", 8, "bold"),
+        )
+        style.map(
+            "Treeview",
             background=[("selected", "#1f3044")],
-            foreground=[("selected", ACCENT)])
+            foreground=[("selected", ACCENT)],
+        )
         style.map("Treeview.Heading", background=[("active", BG3)])
 
-        style.configure("Vertical.TScrollbar",
-            background=BG3, troughcolor=BG, arrowcolor=TEXT2,
-            borderwidth=0, relief="flat")
-        style.configure("Horizontal.TScrollbar",
-            background=BG3, troughcolor=BG, arrowcolor=TEXT2,
-            borderwidth=0, relief="flat")
+        style.configure(
+            "Vertical.TScrollbar",
+            background=BG3,
+            troughcolor=BG,
+            arrowcolor=TEXT2,
+            borderwidth=0,
+            relief="flat",
+        )
+        style.configure(
+            "Horizontal.TScrollbar",
+            background=BG3,
+            troughcolor=BG,
+            arrowcolor=TEXT2,
+            borderwidth=0,
+            relief="flat",
+        )
 
         style.configure("TNotebook", background=BG, borderwidth=0, tabmargins=0)
-        style.configure("TNotebook.Tab",
-            background=BG2, foreground=TEXT2,
-            padding=[12, 5], font=("Segoe UI", 9))
-        style.map("TNotebook.Tab",
+        style.configure(
+            "TNotebook.Tab",
+            background=BG2,
+            foreground=TEXT2,
+            padding=[12, 5],
+            font=("Segoe UI", 9),
+        )
+        style.map(
+            "TNotebook.Tab",
             background=[("selected", BG3)],
-            foreground=[("selected", ACCENT)])
+            foreground=[("selected", ACCENT)],
+        )
 
         style.configure("TFrame", background=BG)
         style.configure("Card.TFrame", background=BG2)
 
         style.configure("TLabel", background=BG, foreground=TEXT)
-        style.configure("Muted.TLabel", background=BG, foreground=TEXT2, font=("Segoe UI", 8))
-        style.configure("Accent.TLabel", background=BG2, foreground=ACCENT, font=("Segoe UI", 10, "bold"))
-        style.configure("Green.TLabel", background=BG2, foreground=ACCENT2, font=("Consolas", 11, "bold"))
-        style.configure("StatLabel.TLabel", background=BG2, foreground=TEXT2, font=("Segoe UI", 8))
-        style.configure("Heading.TLabel", background=BG, foreground=TEXT2, font=("Segoe UI", 8, "bold"))
+        style.configure(
+            "Muted.TLabel", background=BG, foreground=TEXT2, font=("Segoe UI", 8)
+        )
+        style.configure(
+            "Accent.TLabel",
+            background=BG2,
+            foreground=ACCENT,
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.configure(
+            "Green.TLabel",
+            background=BG2,
+            foreground=ACCENT2,
+            font=("Consolas", 11, "bold"),
+        )
+        style.configure(
+            "StatLabel.TLabel", background=BG2, foreground=TEXT2, font=("Segoe UI", 8)
+        )
+        style.configure(
+            "Heading.TLabel",
+            background=BG,
+            foreground=TEXT2,
+            font=("Segoe UI", 8, "bold"),
+        )
 
-        style.configure("TButton",
-            background=BG3, foreground=TEXT, relief="flat",
-            font=("Segoe UI", 9), padding=[8, 4])
-        style.map("TButton",
-            background=[("active", BORDER)], foreground=[("active", ACCENT)])
-        style.configure("Accent.TButton",
-            background="#1a3a5c", foreground=ACCENT, relief="flat",
-            font=("Segoe UI", 9, "bold"), padding=[10, 5])
-        style.map("Accent.TButton",
-            background=[("active", "#1f4878")])
+        style.configure(
+            "TButton",
+            background=BG3,
+            foreground=TEXT,
+            relief="flat",
+            font=("Segoe UI", 9),
+            padding=[8, 4],
+        )
+        style.map(
+            "TButton", background=[("active", BORDER)], foreground=[("active", ACCENT)]
+        )
+        style.configure(
+            "Accent.TButton",
+            background="#1a3a5c",
+            foreground=ACCENT,
+            relief="flat",
+            font=("Segoe UI", 9, "bold"),
+            padding=[10, 5],
+        )
+        style.map("Accent.TButton", background=[("active", "#1f4878")])
 
-        style.configure("TEntry",
-            fieldbackground=BG3, foreground=TEXT, insertcolor=TEXT,
-            borderwidth=1, relief="solid")
+        style.configure(
+            "TEntry",
+            fieldbackground=BG3,
+            foreground=TEXT,
+            insertcolor=TEXT,
+            borderwidth=1,
+            relief="solid",
+        )
         style.map("TEntry", fieldbackground=[("focus", BG3)])
 
-        style.configure("TCombobox",
-            fieldbackground=BG3, foreground=TEXT, background=BG3,
-            arrowcolor=TEXT2, borderwidth=1)
+        style.configure(
+            "TCombobox",
+            fieldbackground=BG3,
+            foreground=TEXT,
+            background=BG3,
+            arrowcolor=TEXT2,
+            borderwidth=1,
+        )
         style.map("TCombobox", fieldbackground=[("readonly", BG3)])
 
         style.configure("TSeparator", background=BORDER)
 
-        style.configure("TLabelframe", background=BG2, foreground=TEXT2, bordercolor=BORDER)
-        style.configure("TLabelframe.Label", background=BG2, foreground=TEXT2, font=("Segoe UI", 8))
+        style.configure(
+            "TLabelframe", background=BG2, foreground=TEXT2, bordercolor=BORDER
+        )
+        style.configure(
+            "TLabelframe.Label", background=BG2, foreground=TEXT2, font=("Segoe UI", 8)
+        )
 
-        style.configure("Score.Horizontal.TProgressbar",
-            troughcolor=BG3, background=ACCENT2, borderwidth=0, thickness=4)
+        style.configure(
+            "Score.Horizontal.TProgressbar",
+            troughcolor=BG3,
+            background=ACCENT2,
+            borderwidth=0,
+            thickness=4,
+        )
 
     def _build_ui(self):
         topbar = tk.Frame(self, bg="#0a0a0a", height=52)
         topbar.pack(fill="x", side="top")
         topbar.pack_propagate(False)
 
-        tk.Label(topbar, text="Kovaaks Sensitivity Performance Tracker",
-            font=("Consolas", 14, "bold"), bg=BG2, fg=ACCENT).pack(side="left", padx=18, pady=12)
-        tk.Label(topbar, text="Inspired by the Corporate Serf method!",
-            font=("Segoe UI", 9), bg=BG2, fg=TEXT2).pack(side="left", pady=12)
+        tk.Label(
+            topbar,
+            text="Kovaaks Sensitivity Performance Tracker",
+            font=("Consolas", 14, "bold"),
+            bg=BG2,
+            fg=ACCENT,
+        ).pack(side="left", padx=18, pady=12)
+        tk.Label(
+            topbar,
+            text="Inspired by the Corporate Serf method!",
+            font=("Segoe UI", 9),
+            bg=BG2,
+            fg=TEXT2,
+        ).pack(side="left", pady=12)
 
-        self.folder_label = tk.Label(topbar, text="Auto-loading default path...",
-            font=("Consolas", 8), bg=BG2, fg=TEXT2, wraplength=350)
+        self.folder_label = tk.Label(
+            topbar,
+            text="Auto-loading default path...",
+            font=("Consolas", 8),
+            bg=BG2,
+            fg=TEXT2,
+            wraplength=350,
+        )
         self.folder_label.pack(side="right", padx=12)
 
-        ttk.Button(topbar, text="↺ Refresh", style="TButton",
-            command=self._refresh).pack(side="right", pady=10)
-        ttk.Button(topbar, text="📂 Select Stats Folder", style="Accent.TButton",
-            command=self._select_folder).pack(side="right", padx=6, pady=10)
+        ttk.Button(
+            topbar, text="↺ Refresh", style="TButton", command=self._refresh
+        ).pack(side="right", pady=10)
+        ttk.Button(
+            topbar,
+            text="📂 Select Stats Folder",
+            style="Accent.TButton",
+            command=self._select_folder,
+        ).pack(side="right", padx=6, pady=10)
 
         tk.Frame(self, bg=BORDER, height=1).pack(fill="x")
 
@@ -150,8 +267,13 @@ class App(tk.Tk):
         body.pack(fill="both", expand=True)
 
         self.main_pane = tk.PanedWindow(
-            body, orient="horizontal", bg=BG,
-            sashwidth=6, sashrelief="flat", bd=0, opaqueresize=False,
+            body,
+            orient="horizontal",
+            bg=BG,
+            sashwidth=6,
+            sashrelief="flat",
+            bd=0,
+            opaqueresize=False,
         )
         self.main_pane.pack(fill="both", expand=True)
 
@@ -172,27 +294,37 @@ class App(tk.Tk):
         hdr = tk.Frame(parent, bg=BG2)
         hdr.pack(fill="x", padx=10, pady=(10, 4))
 
-        tk.Label(hdr, text="SCENARIOS", font=("Segoe UI", 8, "bold"),
-            bg=BG2, fg=TEXT2).pack(anchor="w")
+        tk.Label(
+            hdr, text="SCENARIOS", font=("Segoe UI", 8, "bold"), bg=BG2, fg=TEXT2
+        ).pack(anchor="w")
 
         sf = tk.Frame(hdr, bg=BG2)
         sf.pack(fill="x", pady=4)
         self.search_var = tk.StringVar()
         self.search_var.trace_add("write", lambda *_: self._filter_scenarios())
-        self.search_entry = tk.Entry(sf, textvariable=self.search_var,
-            bg=BG3, fg=TEXT, insertbackground=TEXT, relief="flat",
-            font=("Segoe UI", 9), bd=1)
+        self.search_entry = tk.Entry(
+            sf,
+            textvariable=self.search_var,
+            bg=BG3,
+            fg=TEXT,
+            insertbackground=TEXT,
+            relief="flat",
+            font=("Segoe UI", 9),
+            bd=1,
+        )
         self.search_entry.pack(fill="x", ipady=4)
         self.search_entry.insert(0, "Search scenarios...")
         self.search_entry.bind("<FocusIn>", self._search_focus_in)
         self.search_entry.bind("<FocusOut>", self._search_focus_out)
 
-        self.sel_label = tk.Label(hdr, text="0 / 5 selected",
-            font=("Consolas", 8), bg=BG2, fg=ACCENT2)
+        self.sel_label = tk.Label(
+            hdr, text="0 / 5 selected", font=("Consolas", 8), bg=BG2, fg=ACCENT2
+        )
         self.sel_label.pack(anchor="e")
 
-        self.count_label = tk.Label(hdr, text="0 scenarios",
-            font=("Segoe UI", 8), bg=BG2, fg=TEXT2)
+        self.count_label = tk.Label(
+            hdr, text="0 scenarios", font=("Segoe UI", 8), bg=BG2, fg=TEXT2
+        )
         self.count_label.pack(anchor="w")
 
         tk.Frame(parent, bg=BORDER, height=1).pack(fill="x")
@@ -200,10 +332,19 @@ class App(tk.Tk):
         lf = tk.Frame(parent, bg=BG2)
         lf.pack(fill="both", expand=True)
 
-        self.scenario_lb = tk.Listbox(lf,
-            bg=BG2, fg=TEXT, selectbackground="#1f3044", selectforeground=ACCENT2,
-            relief="flat", bd=0, activestyle="none",
-            font=("Segoe UI", 9), highlightthickness=0, exportselection=False)
+        self.scenario_lb = tk.Listbox(
+            lf,
+            bg=BG2,
+            fg=TEXT,
+            selectbackground="#1f3044",
+            selectforeground=ACCENT2,
+            relief="flat",
+            bd=0,
+            activestyle="none",
+            font=("Segoe UI", 9),
+            highlightthickness=0,
+            exportselection=False,
+        )
         self.scenario_lb.pack(fill="both", expand=True, side="left")
         self.scenario_lb.bind("<ButtonRelease-1>", self._on_scenario_click)
         self.scenario_lb.bind("<Motion>", self._on_scenario_hover)
@@ -265,9 +406,13 @@ class App(tk.Tk):
                 self._scenario_tooltip,
                 text=tooltip_text,
                 font=("Segoe UI", 8),
-                bg=BG3, fg=TEXT,
-                relief="solid", bd=1,
-                padx=8, pady=4, justify="left",
+                bg=BG3,
+                fg=TEXT,
+                relief="solid",
+                bd=1,
+                padx=8,
+                pady=4,
+                justify="left",
             )
             self._scenario_tooltip_label.pack()
         else:
@@ -299,7 +444,9 @@ class App(tk.Tk):
 
     def _select_folder(self):
         init = DEFAULT_STATS_PATH if os.path.exists(DEFAULT_STATS_PATH) else "/"
-        folder = filedialog.askdirectory(title="Select KovaaK's Stats Folder", initialdir=init)
+        folder = filedialog.askdirectory(
+            title="Select KovaaK's Stats Folder", initialdir=init
+        )
         if folder:
             self.folder_path = folder
             self._load_folder()
@@ -375,13 +522,23 @@ class App(tk.Tk):
         for w in self.main_frame.winfo_children():
             w.destroy()
         f = tk.Frame(self.main_frame, bg=BG)
-        f.place(relx=.5, rely=.5, anchor="center")
+        f.place(relx=0.5, rely=0.5, anchor="center")
         tk.Label(f, text="◈", font=("Segoe UI", 48), bg=BG, fg=MUTED).pack()
-        tk.Label(f, text="NO SCENARIOS SELECTED", font=("Consolas", 14, "bold"),
-            bg=BG, fg=TEXT2).pack(pady=8)
-        tk.Label(f,
+        tk.Label(
+            f,
+            text="NO SCENARIOS SELECTED",
+            font=("Consolas", 14, "bold"),
+            bg=BG,
+            fg=TEXT2,
+        ).pack(pady=8)
+        tk.Label(
+            f,
             text="Load your stats folder and select up to 5 scenarios\nfrom the sidebar to begin charting your Kovaaks Sensitivity stats.",
-            font=("Segoe UI", 9), bg=BG, fg=MUTED, justify="center").pack()
+            font=("Segoe UI", 9),
+            bg=BG,
+            fg=MUTED,
+            justify="center",
+        ).pack()
 
     def _refresh_main(self, restore_tab=""):
         for w in self.main_frame.winfo_children():
@@ -426,16 +583,22 @@ class App(tk.Tk):
         win_id = canvas.create_window((0, 0), window=inner, anchor="nw")
 
         canvas.bind("<Configure>", lambda e: canvas.itemconfig(win_id, width=e.width))
-        inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(-1 * (e.delta // 120), "units"))
+        inner.bind(
+            "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        canvas.bind_all(
+            "<MouseWheel>",
+            lambda e: canvas.yview_scroll(-1 * (e.delta // 120), "units"),
+        )
 
         self._build_stats_bar(inner, name, plays, assignments)
         self._build_chart_section(inner, name, plays, assignments)
         self._build_sens_table(inner, name, plays, assignments, ranks)
         self._build_tag_section(inner, name, plays, assignments)
 
-    def _make_collapsible(self, parent, title, collapsed_dict, name,
-                          default_collapsed=False, accent=False):
+    def _make_collapsible(
+        self, parent, title, collapsed_dict, name, default_collapsed=False, accent=False
+    ):
         """Build a collapsible panel. Returns (outer_frame, body_frame)."""
         outer = tk.Frame(parent, bg=BG2, bd=1, relief="solid")
         outer.pack(fill="x", padx=16, pady=6)
@@ -448,13 +611,25 @@ class App(tk.Tk):
         hdr = tk.Frame(outer, bg=BG3, cursor="hand2")
         hdr.pack(fill="x")
 
-        arrow_lbl = tk.Label(hdr,
+        arrow_lbl = tk.Label(
+            hdr,
             text=f"  {'▶' if is_collapsed else '▼'}  {title}",
-            font=("Consolas", 9, "bold"), bg=BG3, fg=fg, anchor="w", pady=6)
+            font=("Consolas", 9, "bold"),
+            bg=BG3,
+            fg=fg,
+            anchor="w",
+            pady=6,
+        )
         arrow_lbl.pack(side="left", padx=4)
 
-        hint_lbl = tk.Label(hdr, text="click to collapse",
-            font=("Segoe UI", 7), bg=BG3, fg=MUTED, anchor="e")
+        hint_lbl = tk.Label(
+            hdr,
+            text="click to collapse",
+            font=("Segoe UI", 7),
+            bg=BG3,
+            fg=MUTED,
+            anchor="e",
+        )
         hint_lbl.pack(side="right", padx=8)
 
         body = tk.Frame(outer, bg=BG2)
@@ -508,12 +683,27 @@ class App(tk.Tk):
 
         title_row = tk.Frame(bar, bg=BG2)
         title_row.pack(fill="x", padx=14, pady=(6, 0))
-        tk.Label(title_row, text=name, font=("Consolas", 10, "bold"),
-            bg=BG2, fg=ACCENT, anchor="w").pack(side="left")
-        tk.Button(title_row, text="✕  close",
-            font=("Segoe UI", 8), bg=BG3, fg=WARN,
-            relief="flat", bd=0, padx=8, pady=2, cursor="hand2",
-            activebackground=BG3, activeforeground="#ff4444",
+        tk.Label(
+            title_row,
+            text=name,
+            font=("Consolas", 10, "bold"),
+            bg=BG2,
+            fg=ACCENT,
+            anchor="w",
+        ).pack(side="left")
+        tk.Button(
+            title_row,
+            text="✕  close",
+            font=("Segoe UI", 8),
+            bg=BG3,
+            fg=WARN,
+            relief="flat",
+            bd=0,
+            padx=8,
+            pady=2,
+            cursor="hand2",
+            activebackground=BG3,
+            activeforeground="#ff4444",
             command=lambda n=name: self._remove_scenario(n),
         ).pack(side="right")
 
@@ -529,7 +719,11 @@ class App(tk.Tk):
         filtered_plays = [p for p in plays if _play_visible(p)]
         all_scores = [p["score"] for p in filtered_plays if p["score"] > 0]
         best = max(all_scores) if all_scores else None
-        best_play = next((p for p in filtered_plays if p["score"] == best), None) if best else None
+        best_play = (
+            next((p for p in filtered_plays if p["score"] == best), None)
+            if best
+            else None
+        )
         cm_of_best = get_effective_cm(best_play, assignments) if best_play else None
         median = calc_median(all_scores)
 
@@ -561,39 +755,73 @@ class App(tk.Tk):
 
         worst_score = None
         if worst_cm is not None:
-            closest = min(cm_bests_filtered, key=lambda c: abs(c - worst_cm), default=None)
+            closest = min(
+                cm_bests_filtered, key=lambda c: abs(c - worst_cm), default=None
+            )
             if closest is not None:
                 worst_score = cm_bests_filtered[closest]
 
-        est_label = f"~{est_cm} cm  ({est_method})" if est_cm is not None else "Need more data"
+        est_label = (
+            f"~{est_cm} cm  ({est_method})" if est_cm is not None else "Need more data"
+        )
 
         stats = [
-            ("OVERALL BEST",  fmt_score(best),                          GOLD),
-            ("CM FOR BEST",   f"{cm_of_best} cm" if cm_of_best else "—", ACCENT),
-            ("BEST CROSSHAIR", crosshair_label,                         ACCENT),
-            ("MEDIAN",        fmt_score(median),                        TEXT),
-            ("TOTAL PLAYS",   str(len(plays)),                          TEXT),
-            ("EST. BEST CM",  est_label,                                ACCENT2),
+            ("OVERALL BEST", fmt_score(best), GOLD),
+            ("CM FOR BEST", f"{cm_of_best} cm" if cm_of_best else "—", ACCENT),
+            ("BEST CROSSHAIR", crosshair_label, ACCENT),
+            ("MEDIAN", fmt_score(median), TEXT),
+            ("TOTAL PLAYS", str(len(plays)), TEXT),
+            ("EST. BEST CM", est_label, ACCENT2),
         ]
         for label, val, col in stats:
             cell = tk.Frame(inner, bg=BG3, padx=12, pady=8)
             cell.pack(side="left", padx=4, fill="y")
-            tk.Label(cell, text=label, font=("Segoe UI", 7, "bold"), bg=BG3, fg=TEXT2).pack(anchor="w")
-            tk.Label(cell, text=val, font=("Consolas", 12, "bold"), bg=BG3, fg=col).pack(anchor="w", pady=(2, 0))
+            tk.Label(
+                cell, text=label, font=("Segoe UI", 7, "bold"), bg=BG3, fg=TEXT2
+            ).pack(anchor="w")
+            tk.Label(
+                cell, text=val, font=("Consolas", 12, "bold"), bg=BG3, fg=col
+            ).pack(anchor="w", pady=(2, 0))
 
-        worst_cell = tk.Frame(inner, bg=WORST_BG, padx=12, pady=8,
-            highlightbackground=WORST_COL, highlightthickness=1)
+        worst_cell = tk.Frame(
+            inner,
+            bg=WORST_BG,
+            padx=12,
+            pady=8,
+            highlightbackground=WORST_COL,
+            highlightthickness=1,
+        )
         worst_cell.pack(side="left", padx=4, fill="y")
-        tk.Label(worst_cell, text="WORST CM",
-            font=("Segoe UI", 7, "bold"), bg=WORST_BG, fg=WORST_COL).pack(anchor="w")
-        tk.Label(worst_cell,
-            text=f"~{worst_cm:.4g} cm\n({worst_method})" if worst_cm is not None else "Need more\ndata",
-            font=("Consolas", 10, "bold"), bg=WORST_BG, fg=WORST_COL,
-            justify="left", anchor="w").pack(anchor="w", pady=(2, 0))
+        tk.Label(
+            worst_cell,
+            text="WORST CM",
+            font=("Segoe UI", 7, "bold"),
+            bg=WORST_BG,
+            fg=WORST_COL,
+        ).pack(anchor="w")
+        tk.Label(
+            worst_cell,
+            text=(
+                f"~{worst_cm:.4g} cm\n({worst_method})"
+                if worst_cm is not None
+                else "Need more\ndata"
+            ),
+            font=("Consolas", 10, "bold"),
+            bg=WORST_BG,
+            fg=WORST_COL,
+            justify="left",
+            anchor="w",
+        ).pack(anchor="w", pady=(2, 0))
         if worst_score is not None:
-            tk.Label(worst_cell, text=f"best: {fmt_score(worst_score)}",
-                font=("Consolas", 8), bg=WORST_BG, fg=TEXT2,
-                justify="left", anchor="w").pack(anchor="w", pady=(2, 0))
+            tk.Label(
+                worst_cell,
+                text=f"best: {fmt_score(worst_score)}",
+                font=("Consolas", 8),
+                bg=WORST_BG,
+                fg=TEXT2,
+                justify="left",
+                anchor="w",
+            ).pack(anchor="w", pady=(2, 0))
 
         rec_cm, rec_reason = recommend_next_cm(
             cm_bests_filtered, est_cm, list(cm_bests_filtered.keys())
@@ -613,29 +841,60 @@ class App(tk.Tk):
         rec_bar.pack(fill="x")
         rec_left = tk.Frame(rec_bar, bg="#0f1f0f")
         rec_left.pack(side="left")
-        tk.Label(rec_left, text="NEXT CM TO TEST",
-            font=("Segoe UI", 7, "bold"), bg="#0f1f0f", fg="#4a8c4a").pack(anchor="w")
-        tk.Label(rec_left,
+        tk.Label(
+            rec_left,
+            text="NEXT CM TO TEST",
+            font=("Segoe UI", 7, "bold"),
+            bg="#0f1f0f",
+            fg="#4a8c4a",
+        ).pack(anchor="w")
+        tk.Label(
+            rec_left,
             text=f"→  {rec_cm:.4g} cm/360   ({rec_reason}){note_str}",
-            font=("Consolas", 11, "bold"), bg="#0f1f0f", fg=ACCENT2).pack(anchor="w", pady=(2, 0))
-        tk.Label(rec_bar,
+            font=("Consolas", 11, "bold"),
+            bg="#0f1f0f",
+            fg=ACCENT2,
+        ).pack(anchor="w", pady=(2, 0))
+        tk.Label(
+            rec_bar,
             text="fills the biggest gap in your data to sharpen the curve fit",
-            font=("Segoe UI", 7), bg="#0f1f0f", fg="#4a8c4a").pack(side="right", padx=8)
+            font=("Segoe UI", 7),
+            bg="#0f1f0f",
+            fg="#4a8c4a",
+        ).pack(side="right", padx=8)
 
-    def _build_cm_row(self, frame, cm_key, label_text, scores, *,
-                      max_score, best_cm, est_cm, worst_cm_key,
-                      nonstandard_cms, name, rank_entries, ranks,
-                      is_question=False):
+    def _build_cm_row(
+        self,
+        frame,
+        cm_key,
+        label_text,
+        scores,
+        *,
+        max_score,
+        best_cm,
+        est_cm,
+        worst_cm_key,
+        nonstandard_cms,
+        name,
+        rank_entries,
+        ranks,
+        is_question=False,
+    ):
         b = max(scores) if scores else None
         med = calc_median(scores) if scores else None
         is_best = cm_key == best_cm and b is not None and not is_question
         is_est = (
-            est_cm is not None and not is_question and b is not None
-            and isinstance(cm_key, float) and abs(cm_key - est_cm) < 1.0
+            est_cm is not None
+            and not is_question
+            and b is not None
+            and isinstance(cm_key, float)
+            and abs(cm_key - est_cm) < 1.0
         )
         is_worst = (
-            worst_cm_key is not None and not is_question
-            and isinstance(cm_key, float) and cm_key == worst_cm_key
+            worst_cm_key is not None
+            and not is_question
+            and isinstance(cm_key, float)
+            and cm_key == worst_cm_key
             and not is_best
         )
 
@@ -656,22 +915,36 @@ class App(tk.Tk):
         inner = tk.Frame(row, bg=row_bg)
         inner.pack(fill="x")
 
-        suffix = "  ★" if is_best else ("  ~" if is_est else ("  ☠" if is_worst else ""))
-        tk.Label(inner,
+        suffix = (
+            "  ★" if is_best else ("  ~" if is_est else ("  ☠" if is_worst else ""))
+        )
+        tk.Label(
+            inner,
             text=label_text + suffix,
             font=("Consolas", 9, "bold" if (is_best or is_worst) else "normal"),
-            bg=row_bg, fg=cm_col, width=9, anchor="w",
+            bg=row_bg,
+            fg=cm_col,
+            width=9,
+            anchor="w",
         ).pack(side="left", padx=(8, 4), pady=4)
 
         sc_col = (
-            GOLD if is_best
-            else WORST_COL if is_worst
-            else WARN if is_question
-            else (ACCENT2 if b else MUTED)
+            GOLD
+            if is_best
+            else (
+                WORST_COL
+                if is_worst
+                else WARN if is_question else (ACCENT2 if b else MUTED)
+            )
         )
-        tk.Label(inner, text=fmt_score(b),
+        tk.Label(
+            inner,
+            text=fmt_score(b),
             font=("Consolas", 10, "bold" if (is_best or is_worst) else "normal"),
-            bg=row_bg, fg=sc_col, width=10, anchor="e",
+            bg=row_bg,
+            fg=sc_col,
+            width=10,
+            anchor="e",
         ).pack(side="left", padx=4)
 
         bar_frame = tk.Frame(inner, bg=row_bg, width=140)
@@ -685,96 +958,195 @@ class App(tk.Tk):
             bar_color = GOLD if is_best else (WORST_COL if is_worst else ACCENT2)
             tk.Frame(bar_bg, bg=bar_color, height=8, width=pct).place(x=0, y=0)
 
-        tk.Label(inner, text=fmt_score(med),
-            font=("Consolas", 9), bg=row_bg, fg=TEXT2, width=10, anchor="e",
+        tk.Label(
+            inner,
+            text=fmt_score(med),
+            font=("Consolas", 9),
+            bg=row_bg,
+            fg=TEXT2,
+            width=10,
+            anchor="e",
         ).pack(side="left", padx=4)
 
-        tk.Label(inner, text=str(len(scores)) if scores else "—",
-            font=("Consolas", 9), bg=row_bg, fg=TEXT2, width=5, anchor="e",
+        tk.Label(
+            inner,
+            text=str(len(scores)) if scores else "—",
+            font=("Consolas", 9),
+            bg=row_bg,
+            fg=TEXT2,
+            width=5,
+            anchor="e",
         ).pack(side="left", padx=4)
 
         if not is_question:
             rank_val = ranks.get(str(cm_key), "")
             rv = tk.StringVar(value=rank_val)
-            tk.Entry(inner, textvariable=rv,
-                bg=BG3, fg=TEXT2 if not rank_val else TEXT,
-                insertbackground=TEXT, relief="flat", bd=1,
-                font=("Segoe UI", 8), width=14,
+            tk.Entry(
+                inner,
+                textvariable=rv,
+                bg=BG3,
+                fg=TEXT2 if not rank_val else TEXT,
+                insertbackground=TEXT,
+                relief="flat",
+                bd=1,
+                font=("Segoe UI", 8),
+                width=14,
             ).pack(side="left", padx=6, pady=4)
             rank_entries[cm_key] = rv
 
             if isinstance(cm_key, float):
-                tk.Button(inner, text="✕",
-                    font=("Segoe UI", 7), bg=row_bg, fg=MUTED,
-                    relief="flat", bd=0, padx=4, pady=2, cursor="hand2",
-                    activebackground=row_bg, activeforeground=WARN,
+                tk.Button(
+                    inner,
+                    text="✕",
+                    font=("Segoe UI", 7),
+                    bg=row_bg,
+                    fg=MUTED,
+                    relief="flat",
+                    bd=0,
+                    padx=4,
+                    pady=2,
+                    cursor="hand2",
+                    activebackground=row_bg,
+                    activeforeground=WARN,
                     command=lambda c=cm_key, n=name: self._hide_cm(n, c),
                 ).pack(side="left", padx=2)
         else:
-            tk.Label(inner,
+            tk.Label(
+                inner,
                 text=f"{len(nonstandard_cms)} unique non-standard sens",
-                font=("Segoe UI", 7), bg=row_bg, fg=WARN,
+                font=("Segoe UI", 7),
+                bg=row_bg,
+                fg=WARN,
             ).pack(side="left", padx=6)
 
     def _build_sens_table(self, parent, name, plays, assignments, ranks):
         _, frame = self._make_collapsible(
-            parent, "SENSITIVITY CHART", self._table_collapsed, name,
-            default_collapsed=False, accent=True,
+            parent,
+            "SENSITIVITY CHART",
+            self._table_collapsed,
+            name,
+            default_collapsed=False,
+            accent=True,
         )
 
         tog_row = tk.Frame(frame, bg=BG2)
         tog_row.pack(fill="x", padx=8, pady=(6, 2))
-        tk.Label(tog_row, text="Show non-standard cm/360 rows:",
-            font=("Segoe UI", 8), bg=BG2, fg=TEXT2).pack(side="left")
-        tk.Checkbutton(tog_row, text="ON",
-            variable=self.show_all_cm, command=lambda: self._refresh_main(),
-            bg=BG2, fg=ACCENT2, selectcolor=BG3, activebackground=BG2,
-            activeforeground=ACCENT2, font=("Consolas", 8, "bold"),
-            relief="flat", bd=0, cursor="hand2").pack(side="left", padx=6)
-        tk.Label(tog_row,
+        tk.Label(
+            tog_row,
+            text="Show non-standard cm/360 rows:",
+            font=("Segoe UI", 8),
+            bg=BG2,
+            fg=TEXT2,
+        ).pack(side="left")
+        tk.Checkbutton(
+            tog_row,
+            text="ON",
+            variable=self.show_all_cm,
+            command=lambda: self._refresh_main(),
+            bg=BG2,
+            fg=ACCENT2,
+            selectcolor=BG3,
+            activebackground=BG2,
+            activeforeground=ACCENT2,
+            font=("Consolas", 8, "bold"),
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+        ).pack(side="left", padx=6)
+        tk.Label(
+            tog_row,
             text="(off = plays at non-standard sens shown as ? and excluded from chart)",
-            font=("Segoe UI", 7), bg=BG2, fg=MUTED).pack(side="left", padx=4)
+            font=("Segoe UI", 7),
+            bg=BG2,
+            fg=MUTED,
+        ).pack(side="left", padx=4)
 
         l8_row = tk.Frame(frame, bg=BG2)
         l8_row.pack(fill="x", padx=8, pady=(0, 4))
-        tk.Label(l8_row, text="Only count last 8 runs per sensitivity:",
-            font=("Segoe UI", 8), bg=BG2, fg=TEXT2).pack(side="left")
-        tk.Checkbutton(l8_row, text="ON",
-            variable=self.last_8_only, command=lambda: self._refresh_main(),
-            bg=BG2, fg=ACCENT2, selectcolor=BG3, activebackground=BG2,
-            activeforeground=ACCENT2, font=("Consolas", 8, "bold"),
-            relief="flat", bd=0, cursor="hand2").pack(side="left", padx=6)
-        tk.Label(l8_row, text="(uses 8 most recent plays per cm for best/median)",
-            font=("Segoe UI", 7), bg=BG2, fg=MUTED).pack(side="left", padx=4)
+        tk.Label(
+            l8_row,
+            text="Only count last 8 runs per sensitivity:",
+            font=("Segoe UI", 8),
+            bg=BG2,
+            fg=TEXT2,
+        ).pack(side="left")
+        tk.Checkbutton(
+            l8_row,
+            text="ON",
+            variable=self.last_8_only,
+            command=lambda: self._refresh_main(),
+            bg=BG2,
+            fg=ACCENT2,
+            selectcolor=BG3,
+            activebackground=BG2,
+            activeforeground=ACCENT2,
+            font=("Consolas", 8, "bold"),
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+        ).pack(side="left", padx=6)
+        tk.Label(
+            l8_row,
+            text="(uses 8 most recent plays per cm for best/median)",
+            font=("Segoe UI", 7),
+            bg=BG2,
+            fg=MUTED,
+        ).pack(side="left", padx=4)
 
         range_row = tk.Frame(frame, bg="#0a1a2a")
         range_row.pack(fill="x", padx=8, pady=(0, 4))
-        tk.Label(range_row, text="CM RANGE FILTER:",
-            font=("Segoe UI", 8, "bold"), bg="#0a1a2a", fg=ACCENT).pack(side="left", padx=(6, 4))
+        tk.Label(
+            range_row,
+            text="CM RANGE FILTER:",
+            font=("Segoe UI", 8, "bold"),
+            bg="#0a1a2a",
+            fg=ACCENT,
+        ).pack(side="left", padx=(6, 4))
 
         for label, var in [("min", self.cm_range_min), ("max", self.cm_range_max)]:
-            tk.Label(range_row, text=label,
-                font=("Segoe UI", 8), bg="#0a1a2a", fg=TEXT2).pack(side="left")
-            tk.Entry(range_row, textvariable=var,
-                bg=BG3, fg=TEXT, insertbackground=TEXT, relief="flat", bd=1,
-                font=("Consolas", 9), width=6).pack(side="left", padx=(2, 6), ipady=2)
+            tk.Label(
+                range_row, text=label, font=("Segoe UI", 8), bg="#0a1a2a", fg=TEXT2
+            ).pack(side="left")
+            tk.Entry(
+                range_row,
+                textvariable=var,
+                bg=BG3,
+                fg=TEXT,
+                insertbackground=TEXT,
+                relief="flat",
+                bd=1,
+                font=("Consolas", 9),
+                width=6,
+            ).pack(side="left", padx=(2, 6), ipady=2)
 
-        ttk.Button(range_row, text="Apply", style="TButton",
-            command=lambda: self._refresh_main()).pack(side="left", padx=2)
-        ttk.Button(range_row, text="Clear", style="TButton",
-            command=self._clear_range).pack(side="left", padx=2)
+        ttk.Button(
+            range_row,
+            text="Apply",
+            style="TButton",
+            command=lambda: self._refresh_main(),
+        ).pack(side="left", padx=2)
+        ttk.Button(
+            range_row, text="Clear", style="TButton", command=self._clear_range
+        ).pack(side="left", padx=2)
 
         lo, hi = self._get_active_range()
         if lo is not None or hi is not None:
             lo_s = f"{lo:.4g}" if lo is not None else "any"
             hi_s = f"{hi:.4g}" if hi is not None else "any"
-            range_status = f"active: {lo_s} – {hi_s} cm  (also limits next-cm recommendation)"
+            range_status = (
+                f"active: {lo_s} – {hi_s} cm  (also limits next-cm recommendation)"
+            )
             range_col = ACCENT2
         else:
             range_status = "inactive"
             range_col = MUTED
-        tk.Label(range_row, text=range_status,
-            font=("Segoe UI", 7), bg="#0a1a2a", fg=range_col).pack(side="left", padx=8)
+        tk.Label(
+            range_row,
+            text=range_status,
+            font=("Segoe UI", 7),
+            bg="#0a1a2a",
+            fg=range_col,
+        ).pack(side="left", padx=8)
 
         byCm = defaultdict(list)
         for p in plays:
@@ -789,8 +1161,14 @@ class App(tk.Tk):
         standard_cms = [float(c) for c in CM_OPTIONS]
         nonstandard_cms = sorted(cm for cm in byCm if cm not in standard_cms)
 
-        display_cms_raw = sorted(set(standard_cms) | set(nonstandard_cms)) if show_all else standard_cms
-        display_cms = [cm for cm in display_cms_raw if self._cm_in_range(cm) and cm not in hidden]
+        display_cms_raw = (
+            sorted(set(standard_cms) | set(nonstandard_cms))
+            if show_all
+            else standard_cms
+        )
+        display_cms = [
+            cm for cm in display_cms_raw if self._cm_in_range(cm) and cm not in hidden
+        ]
 
         all_displayed_scores = [s for cm in display_cms for s in byCm.get(cm, [])]
         max_score = max(all_displayed_scores) if all_displayed_scores else 1
@@ -804,14 +1182,16 @@ class App(tk.Tk):
                 best_cm = cm
 
         cm_bests_visible = {
-            cm: max(scores) for cm, scores in byCm.items()
+            cm: max(scores)
+            for cm, scores in byCm.items()
             if cm in display_cms and byCm.get(cm)
         }
         est_cm, _ = estimate_best_cm(cm_bests_visible)
         worst_cm_table, _ = estimate_worst_cm(cm_bests_visible)
         worst_cm_key = (
             min(cm_bests_visible, key=lambda c: abs(c - worst_cm_table), default=None)
-            if worst_cm_table is not None and cm_bests_visible else None
+            if worst_cm_table is not None and cm_bests_visible
+            else None
         )
 
         rank_entries = {}
@@ -819,32 +1199,50 @@ class App(tk.Tk):
         header = tk.Frame(frame, bg=BG3)
         header.pack(fill="x")
         for txt, w, anchor in [
-            ("CM/360", 9, "w"), ("Best Score", 10, "e"),
-            ("Bar", 17, "w"), ("Median", 10, "e"),
-            ("Plays", 5, "e"), ("Peak Rank", 14, "w"),
+            ("CM/360", 9, "w"),
+            ("Best Score", 10, "e"),
+            ("Bar", 17, "w"),
+            ("Median", 10, "e"),
+            ("Plays", 5, "e"),
+            ("Peak Rank", 14, "w"),
         ]:
-            tk.Label(header, text=txt, font=("Segoe UI", 8, "bold"),
-                bg=BG3, fg=TEXT2, width=w, anchor=anchor, pady=5,
+            tk.Label(
+                header,
+                text=txt,
+                font=("Segoe UI", 8, "bold"),
+                bg=BG3,
+                fg=TEXT2,
+                width=w,
+                anchor=anchor,
+                pady=5,
             ).pack(side="left", padx=(8 if anchor == "w" and txt == "CM/360" else 2, 2))
         tk.Label(header, text="", bg=BG3, width=4).pack(side="left")
         tk.Frame(frame, bg=BORDER, height=1).pack(fill="x")
 
         row_ctx = dict(
-            max_score=max_score, best_cm=best_cm, est_cm=est_cm,
-            worst_cm_key=worst_cm_key, nonstandard_cms=nonstandard_cms,
-            name=name, rank_entries=rank_entries, ranks=ranks,
+            max_score=max_score,
+            best_cm=best_cm,
+            est_cm=est_cm,
+            worst_cm_key=worst_cm_key,
+            nonstandard_cms=nonstandard_cms,
+            name=name,
+            rank_entries=rank_entries,
+            ranks=ranks,
         )
         for cm in display_cms:
             self._build_cm_row(frame, cm, f"{cm:.4g} cm", byCm.get(cm, []), **row_ctx)
 
         if not show_all and nonstandard_cms:
             visible_nonstandard = [
-                cm for cm in nonstandard_cms
+                cm
+                for cm in nonstandard_cms
                 if self._cm_in_range(cm) and cm not in hidden
             ]
             if visible_nonstandard:
                 ns_scores = [s for cm in visible_nonstandard for s in byCm.get(cm, [])]
-                self._build_cm_row(frame, "?", "? cm", ns_scores, is_question=True, **row_ctx)
+                self._build_cm_row(
+                    frame, "?", "? cm", ns_scores, is_question=True, **row_ctx
+                )
 
         def save_ranks(*_):
             if name not in self.storage["ranks"]:
@@ -864,44 +1262,73 @@ class App(tk.Tk):
         if hidden:
             hidden_frame = tk.Frame(frame, bg="#1a1a2a")
             hidden_frame.pack(fill="x", padx=8, pady=(4, 2))
-            tk.Label(hidden_frame,
+            tk.Label(
+                hidden_frame,
                 text="  HIDDEN FROM CHART (temporary — resets on restart):",
-                font=("Segoe UI", 7, "bold"), bg="#1a1a2a", fg=MUTED).pack(side="left", padx=4)
+                font=("Segoe UI", 7, "bold"),
+                bg="#1a1a2a",
+                fg=MUTED,
+            ).pack(side="left", padx=4)
             for hcm in sorted(hidden):
                 chip = tk.Frame(hidden_frame, bg=BG3)
                 chip.pack(side="left", padx=2, pady=3)
-                tk.Label(chip, text=f" {hcm:.4g} cm ",
-                    font=("Consolas", 8), bg=BG3, fg=TEXT2).pack(side="left")
-                tk.Button(chip, text="↩",
-                    font=("Segoe UI", 7), bg=BG3, fg=ACCENT2,
-                    relief="flat", bd=0, padx=2, cursor="hand2",
-                    activebackground=BG3, activeforeground=ACCENT,
-                    command=lambda c=hcm, n=name: self._unhide_cm(n, c)).pack(side="left")
-            tk.Button(hidden_frame, text="↩ restore all",
-                font=("Segoe UI", 7), bg="#1a1a2a", fg=ACCENT2,
-                relief="flat", bd=0, padx=6, cursor="hand2",
-                activebackground="#1a1a2a", activeforeground=ACCENT,
+                tk.Label(
+                    chip, text=f" {hcm:.4g} cm ", font=("Consolas", 8), bg=BG3, fg=TEXT2
+                ).pack(side="left")
+                tk.Button(
+                    chip,
+                    text="↩",
+                    font=("Segoe UI", 7),
+                    bg=BG3,
+                    fg=ACCENT2,
+                    relief="flat",
+                    bd=0,
+                    padx=2,
+                    cursor="hand2",
+                    activebackground=BG3,
+                    activeforeground=ACCENT,
+                    command=lambda c=hcm, n=name: self._unhide_cm(n, c),
+                ).pack(side="left")
+            tk.Button(
+                hidden_frame,
+                text="↩ restore all",
+                font=("Segoe UI", 7),
+                bg="#1a1a2a",
+                fg=ACCENT2,
+                relief="flat",
+                bd=0,
+                padx=6,
+                cursor="hand2",
+                activebackground="#1a1a2a",
+                activeforeground=ACCENT,
                 command=lambda: (self._hidden_cms[name].clear(), self._refresh_main()),
             ).pack(side="left", padx=8)
 
         lo, hi = self._get_active_range()
         legend_notes = ["★ = best cm", "~ = est. best", "☠ = worst cm"]
         if nonstandard_cms and not show_all:
-            legend_notes.append(f"{len(nonstandard_cms)} non-standard cm values hidden (toggle to show)")
+            legend_notes.append(
+                f"{len(nonstandard_cms)} non-standard cm values hidden (toggle to show)"
+            )
         if lo is not None or hi is not None:
             legend_notes.append("range filter active")
         legend_notes.append(
             f"{len(hidden)} cm(s) hidden (✕ to hide, ↩ to restore)"
-            if hidden else "click ✕ on a row to temporarily hide it"
+            if hidden
+            else "click ✕ on a row to temporarily hide it"
         )
         leg = tk.Frame(frame, bg=BG2)
         leg.pack(fill="x", padx=8, pady=(4, 8))
-        tk.Label(leg, text="  |  ".join(legend_notes),
-            font=("Segoe UI", 7), bg=BG2, fg=MUTED).pack(anchor="w")
+        tk.Label(
+            leg, text="  |  ".join(legend_notes), font=("Segoe UI", 7), bg=BG2, fg=MUTED
+        ).pack(anchor="w")
 
     def _build_tag_section(self, parent, name, plays, assignments):
         _, frame = self._make_collapsible(
-            parent, "TAG PLAY SENSITIVITIES", self._plays_collapsed, name,
+            parent,
+            "TAG PLAY SENSITIVITIES",
+            self._plays_collapsed,
+            name,
             default_collapsed=True,
         )
 
@@ -910,9 +1337,13 @@ class App(tk.Tk):
         auto_count = sum(1 for p in plays if p.get("cm360") is not None)
         manual_count = sum(1 for p in plays if p["filename"] in assignments)
         unresolved = sum(1 for p in plays if get_effective_cm(p, assignments) is None)
-        tk.Label(info,
+        tk.Label(
+            info,
             text=f"✓ {auto_count} auto-detected  +  {manual_count} manual override  |  {unresolved} unresolved",
-            font=("Consolas", 8), bg=BG2, fg=ACCENT2).pack(side="left")
+            font=("Consolas", 8),
+            bg=BG2,
+            fg=ACCENT2,
+        ).pack(side="left")
 
     def _hide_cm(self, name: str, cm: float):
         self._hidden_cms[name].add(cm)
@@ -926,14 +1357,19 @@ class App(tk.Tk):
 
     def _build_chart_section(self, parent, name, plays, assignments):
         _, chart_frame = self._make_collapsible(
-            parent, "CM/360 SCORE CHART", self._chart_collapsed, name,
-            default_collapsed=True, accent=True,
+            parent,
+            "CM/360 SCORE CHART",
+            self._chart_collapsed,
+            name,
+            default_collapsed=True,
+            accent=True,
         )
 
         controls_row = tk.Frame(chart_frame, bg=BG2)
         controls_row.pack(fill="x", padx=12, pady=(8, 2))
-        tk.Label(controls_row, text="Chart size:",
-            font=("Segoe UI", 8), bg=BG2, fg=TEXT2).pack(side="left")
+        tk.Label(
+            controls_row, text="Chart size:", font=("Segoe UI", 8), bg=BG2, fg=TEXT2
+        ).pack(side="left")
 
         def _set_scale(delta):
             self.chart_scale.set(max(0.85, min(1.8, self.chart_scale.get() + delta)))
@@ -944,24 +1380,46 @@ class App(tk.Tk):
             self._refresh_main(restore_tab=name)
 
         for label, cmd in [
-            ("− Width",  lambda: _set_scale(-0.10)),
-            ("+ Width",  lambda: _set_scale(+0.10)),
+            ("− Width", lambda: _set_scale(-0.10)),
+            ("+ Width", lambda: _set_scale(+0.10)),
             ("− Height", lambda: _set_height(-0.10)),
             ("+ Height", lambda: _set_height(+0.10)),
         ]:
-            tk.Button(controls_row, text=label,
-                font=("Segoe UI", 8), bg=BG3, fg=TEXT2,
-                relief="flat", bd=0, padx=8, pady=3, cursor="hand2",
-                command=cmd).pack(side="left", padx=2)
+            tk.Button(
+                controls_row,
+                text=label,
+                font=("Segoe UI", 8),
+                bg=BG3,
+                fg=TEXT2,
+                relief="flat",
+                bd=0,
+                padx=8,
+                pady=3,
+                cursor="hand2",
+                command=cmd,
+            ).pack(side="left", padx=2)
 
-        tk.Button(controls_row, text="Reset",
-            font=("Segoe UI", 8), bg=BG3, fg=ACCENT,
-            relief="flat", bd=0, padx=8, pady=3, cursor="hand2",
-            command=lambda: self._reset_chart_size(name)).pack(side="left", padx=(10, 2))
+        tk.Button(
+            controls_row,
+            text="Reset",
+            font=("Segoe UI", 8),
+            bg=BG3,
+            fg=ACCENT,
+            relief="flat",
+            bd=0,
+            padx=8,
+            pady=3,
+            cursor="hand2",
+            command=lambda: self._reset_chart_size(name),
+        ).pack(side="left", padx=(10, 2))
 
-        tk.Label(controls_row,
+        tk.Label(
+            controls_row,
             text=f"width {self.chart_scale.get():.2f}x   height {self.chart_height.get():.2f}x",
-            font=("Consolas", 8), bg=BG2, fg=MUTED).pack(side="left", padx=10)
+            font=("Consolas", 8),
+            bg=BG2,
+            fg=MUTED,
+        ).pack(side="left", padx=10)
 
         hidden = self._hidden_cms.get(name, set())
         by_cm = defaultdict(list)
@@ -974,13 +1432,17 @@ class App(tk.Tk):
             by_cm = defaultdict(list, {cm: scores[-8:] for cm, scores in by_cm.items()})
 
         visible_cms = sorted(
-            cm for cm in by_cm
-            if self._cm_in_range(cm) and cm not in hidden
+            cm for cm in by_cm if self._cm_in_range(cm) and cm not in hidden
         )
 
         if not visible_cms:
-            tk.Label(chart_frame, text="No data to chart with current filters.",
-                font=("Segoe UI", 9), bg=BG2, fg=MUTED).pack(pady=20)
+            tk.Label(
+                chart_frame,
+                text="No data to chart with current filters.",
+                font=("Segoe UI", 9),
+                bg=BG2,
+                fg=MUTED,
+            ).pack(pady=20)
             return
 
         figure = self._create_score_chart_figure(visible_cms=visible_cms, by_cm=by_cm)
@@ -1000,7 +1462,9 @@ class App(tk.Tk):
             min(cm_bests, key=lambda c: abs(c - est_cm)) if est_cm is not None else None
         )
         worst_cm_key = (
-            min(cm_bests, key=lambda c: abs(c - worst_cm)) if worst_cm is not None else None
+            min(cm_bests, key=lambda c: abs(c - worst_cm))
+            if worst_cm is not None
+            else None
         )
 
         bar_count = len(visible_cms)
@@ -1016,13 +1480,18 @@ class App(tk.Tk):
 
         x_positions = list(range(bar_count))
         bar_colors = [
-            GOLD if cm == est_cm_key
-            else WORST_COL if cm == worst_cm_key
-            else ACCENT
+            GOLD if cm == est_cm_key else WORST_COL if cm == worst_cm_key else ACCENT
             for cm in visible_cms
         ]
 
-        bars = axis.bar(x_positions, best_scores, color=bar_colors, width=0.78, zorder=2, linewidth=0)
+        bars = axis.bar(
+            x_positions,
+            best_scores,
+            color=bar_colors,
+            width=0.78,
+            zorder=2,
+            linewidth=0,
+        )
 
         max_score = max(best_scores)
         min_score = min(best_scores)
@@ -1033,41 +1502,80 @@ class App(tk.Tk):
                 bar_rect.get_x() + bar_rect.get_width() / 2,
                 bar_rect.get_height() + label_offset,
                 str(int(score)),
-                ha="center", va="bottom",
-                color=TEXT2, fontsize=8, fontfamily="Consolas",
+                ha="center",
+                va="bottom",
+                color=TEXT2,
+                fontsize=8,
+                fontfamily="Consolas",
             )
 
         if est_cm_key is not None:
             est_index = visible_cms.index(est_cm_key)
-            axis.axvline(est_index, color=GOLD, linewidth=1.5, linestyle="--", zorder=3, alpha=0.85)
+            axis.axvline(
+                est_index,
+                color=GOLD,
+                linewidth=1.5,
+                linestyle="--",
+                zorder=3,
+                alpha=0.85,
+            )
             axis.text(
-                est_index + 0.22, max_score * 0.985,
+                est_index + 0.22,
+                max_score * 0.985,
                 f"est. best\n~{est_cm:.4g} cm",
-                color=GOLD, fontsize=8, va="top", ha="left", fontfamily="Consolas",
-                bbox=dict(boxstyle="round,pad=0.22", facecolor=BG2, edgecolor="none", alpha=0.92),
+                color=GOLD,
+                fontsize=8,
+                va="top",
+                ha="left",
+                fontfamily="Consolas",
+                bbox=dict(
+                    boxstyle="round,pad=0.22",
+                    facecolor=BG2,
+                    edgecolor="none",
+                    alpha=0.92,
+                ),
                 zorder=4,
             )
 
         if worst_cm_key is not None and worst_cm_key != est_cm_key:
             worst_index = visible_cms.index(worst_cm_key)
-            axis.axvline(worst_index, color=WORST_COL, linewidth=1.5, linestyle=":", zorder=3, alpha=0.85)
+            axis.axvline(
+                worst_index,
+                color=WORST_COL,
+                linewidth=1.5,
+                linestyle=":",
+                zorder=3,
+                alpha=0.85,
+            )
             label_x = worst_index + 0.38
             label_align = "left"
             if worst_index >= bar_count - 2:
                 label_x = worst_index - 0.38
                 label_align = "right"
             axis.text(
-                label_x, max_score * 0.86,
+                label_x,
+                max_score * 0.86,
                 f"worst\n~{worst_cm:.4g} cm",
-                color=WORST_COL, fontsize=8, va="top", ha=label_align, fontfamily="Consolas",
-                bbox=dict(boxstyle="round,pad=0.22", facecolor=BG2, edgecolor="none", alpha=0.92),
+                color=WORST_COL,
+                fontsize=8,
+                va="top",
+                ha=label_align,
+                fontfamily="Consolas",
+                bbox=dict(
+                    boxstyle="round,pad=0.22",
+                    facecolor=BG2,
+                    edgecolor="none",
+                    alpha=0.92,
+                ),
                 zorder=4,
             )
 
         axis.set_xticks(x_positions)
         axis.set_xticklabels(
             [f"{cm:.4g}" for cm in visible_cms],
-            color=TEXT2, fontsize=8, fontfamily="Consolas",
+            color=TEXT2,
+            fontsize=8,
+            fontfamily="Consolas",
         )
         axis.set_ylabel("Best Score", color=TEXT2, fontsize=9)
         axis.set_xlabel("cm / 360", color=TEXT2, fontsize=9)
@@ -1081,18 +1589,38 @@ class App(tk.Tk):
         axis.set_axisbelow(True)
 
         legend_handles = [
-            mpatches.Patch(color=GOLD,
-                label=f"Est. best  (~{est_cm:.4g} cm  {est_method})" if est_cm is not None else "Est. best"),
-            mpatches.Patch(color=WORST_COL,
-                label=f"Worst  (~{worst_cm:.4g} cm  {worst_method})" if worst_cm is not None else "Worst"),
+            mpatches.Patch(
+                color=GOLD,
+                label=(
+                    f"Est. best  (~{est_cm:.4g} cm  {est_method})"
+                    if est_cm is not None
+                    else "Est. best"
+                ),
+            ),
+            mpatches.Patch(
+                color=WORST_COL,
+                label=(
+                    f"Worst  (~{worst_cm:.4g} cm  {worst_method})"
+                    if worst_cm is not None
+                    else "Worst"
+                ),
+            ),
             mpatches.Patch(color=ACCENT, label="Other tested cm"),
         ]
         axis.legend(
             handles=legend_handles,
-            loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=3,
-            facecolor=BG3, edgecolor=BG3, labelcolor=TEXT2, fontsize=8,
-            framealpha=1.0, borderpad=0.6, handlelength=1.6,
-            handletextpad=0.5, columnspacing=1.4,
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.16),
+            ncol=3,
+            facecolor=BG3,
+            edgecolor=BG3,
+            labelcolor=TEXT2,
+            fontsize=8,
+            framealpha=1.0,
+            borderpad=0.6,
+            handlelength=1.6,
+            handletextpad=0.5,
+            columnspacing=1.4,
         )
         figure.tight_layout(pad=1.2, rect=(0, 0.06, 1, 1))
         return figure
@@ -1113,7 +1641,8 @@ class App(tk.Tk):
         plays = self.all_scenarios.get(name, [])
         assignments = self.storage["assignments"].get(name, {})
         unassigned = next(
-            (p for p in reversed(plays) if get_effective_cm(p, assignments) is None), None
+            (p for p in reversed(plays) if get_effective_cm(p, assignments) is None),
+            None,
         )
         if not unassigned:
             self._show_toast("All plays have a cm/360 assigned!")
@@ -1142,8 +1671,15 @@ class App(tk.Tk):
         toast.overrideredirect(True)
         toast.attributes("-topmost", True)
         toast.configure(bg=BG2)
-        tk.Label(toast, text=f"  {msg}  ",
-            font=("Consolas", 9), bg=BG2, fg=ACCENT2, padx=10, pady=6).pack()
+        tk.Label(
+            toast,
+            text=f"  {msg}  ",
+            font=("Consolas", 9),
+            bg=BG2,
+            fg=ACCENT2,
+            padx=10,
+            pady=6,
+        ).pack()
         self.update_idletasks()
         x = self.winfo_x() + self.winfo_width() - 320
         y = self.winfo_y() + self.winfo_height() - 60
