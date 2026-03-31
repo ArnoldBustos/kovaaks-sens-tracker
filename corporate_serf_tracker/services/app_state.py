@@ -17,6 +17,7 @@ class AppState:
     hidden_cms_by_scenario: dict = field(default_factory=dict)
     chart_expanded: bool = True
     table_expanded: bool = True
+    last_export_directory: str = ""
 
     def set_folder_path(self, folder_path: str):
         self.folder_path = folder_path or ""
@@ -81,7 +82,7 @@ class AppState:
 
     def scenario_count_label(self, visible_count: int) -> str:
         return f"{visible_count} scenarios"
-    
+
     def to_persisted_dict(self) -> dict:
         return {
             "selected_scenarios": self.selected_scenarios,
@@ -96,6 +97,7 @@ class AppState:
             "hidden_cms_by_scenario": self.hidden_cms_by_scenario,
             "chart_expanded": self.chart_expanded,
             "table_expanded": self.table_expanded,
+            "last_export_directory": self.last_export_directory,
         }
 
     def apply_persisted_dict(self, persisted_state: dict):
@@ -112,3 +114,6 @@ class AppState:
             "hidden_cms_by_scenario",
             {},
         )
+        self.chart_expanded = persisted_state.get("chart_expanded", True)
+        self.table_expanded = persisted_state.get("table_expanded", True)
+        self.last_export_directory = persisted_state.get("last_export_directory", "")

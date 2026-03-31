@@ -6,7 +6,16 @@ from PySide6.QtGui import QWheelEvent
 from PySide6.QtWidgets import QScrollArea, QVBoxLayout, QWidget
 
 from corporate_serf_tracker.analysis import estimate_best_cm, estimate_worst_cm
-from corporate_serf_tracker.constants import ACCENT, BG2, BG3, GOLD, TEXT2, WORST_COL
+from corporate_serf_tracker.constants import (
+    ACCENT,
+    BG2,
+    BG3,
+    GOLD,
+    TEXT2,
+    WORST_BG,
+    WORST_COL,
+)
+
 
 class ScrollPassthroughCanvas(FigureCanvasQTAgg):
     def wheelEvent(self, event: QWheelEvent):
@@ -31,13 +40,9 @@ class ScrollPassthroughCanvas(FigureCanvasQTAgg):
         step_amount = 60
 
         if delta_y > 0:
-            vertical_scrollbar.setValue(
-                vertical_scrollbar.value() - step_amount
-            )
+            vertical_scrollbar.setValue(vertical_scrollbar.value() - step_amount)
         else:
-            vertical_scrollbar.setValue(
-                vertical_scrollbar.value() + step_amount
-            )
+            vertical_scrollbar.setValue(vertical_scrollbar.value() + step_amount)
 
         event.accept()
 
@@ -61,7 +66,7 @@ class ScoreChartWidget(QWidget):
         root_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(root_layout)
 
-        self.figure = Figure(figsize=(7.2, 4.6), dpi=100)
+        self.figure = Figure(figsize=(7.6, 4.9), dpi=100)
         self.canvas = ScrollPassthroughCanvas(self.figure)
 
         root_layout.addWidget(self.canvas)
@@ -72,9 +77,9 @@ class ScoreChartWidget(QWidget):
         visible_cms = sorted(self.by_cm_scores.keys())
 
         self.figure.clear()
+        self.figure.patch.set_facecolor(BG2)
 
         axis = self.figure.add_subplot(111)
-        self.figure.patch.set_facecolor(BG2)
         axis.set_facecolor(BG2)
 
         if not visible_cms:
@@ -90,8 +95,11 @@ class ScoreChartWidget(QWidget):
             )
             axis.set_xticks([])
             axis.set_yticks([])
+
             for spine in axis.spines.values():
                 spine.set_color(BG3)
+
+            self.figure.subplots_adjust(left=0.08, right=0.98, top=0.92, bottom=0.14)
             self.canvas.draw()
             return
 
@@ -121,8 +129,8 @@ class ScoreChartWidget(QWidget):
             )
 
         x_positions = list(range(len(visible_cms)))
-        bar_colors = []
 
+        bar_colors = []
         for cm_value in visible_cms:
             if cm_value == estimated_best_key:
                 bar_colors.append(GOLD)
@@ -131,42 +139,71 @@ class ScoreChartWidget(QWidget):
             else:
                 bar_colors.append(ACCENT)
 
-        bars = axis.bar(
+        axis.bar(
             x_positions,
             best_scores,
             color=bar_colors,
-            width=0.65,
+            width=0.62,
             zorder=2,
             linewidth=0,
         )
 
         max_score = max(best_scores)
         min_score = min(best_scores)
+        score_range = max_score - min_score
+
+        if score_range <= 0:
+            score_range = max(1.0, max_score * 0.1)
+
+        lower_padding = score_range * 0.12
+        upper_padding = score_range * 0.28
+
+        y_min = min_score - lower_padding
+        if y_min < 0:
+            y_min = 0
+
+        y_max = max_score + upper_padding
+
+        axis.set_ylim(y_min, y_max)
+        axis.margins(x=0.05)
+        axis.grid(axis="y", color=BG3, linewidth=0.8, zorder=0)
+        axis.set_axisbelow(True)
 
         if estimated_best_key is not None:
             estimated_best_index = visible_cms.index(estimated_best_key)
+
             axis.axvline(
                 estimated_best_index,
                 color=GOLD,
                 linewidth=1.5,
                 linestyle="--",
                 zorder=3,
-                alpha=0.85,
+                alpha=0.9,
             )
+
+            best_label_y = y_max - (score_range * 0.04)
+            best_label_x = estimated_best_index + 0.22
+            best_label_align = "left"
+
+            if estimated_best_index >= len(visible_cms) - 2:
+                best_label_x = estimated_best_index - 0.22
+                best_label_align = "right"
+
             axis.text(
-                estimated_best_index + 0.22,
-                max_score * 0.985,
+                best_label_x,
+                best_label_y,
                 f"est. best\n~{estimated_best_cm:.4g} cm",
                 color=GOLD,
                 fontsize=8,
                 va="top",
-                ha="left",
+                ha=best_label_align,
                 fontfamily="Consolas",
                 bbox={
-                    "boxstyle": "round,pad=0.22",
+                    "boxstyle": "round,pad=0.24",
                     "facecolor": BG2,
-                    "edgecolor": "none",
-                    "alpha": 0.92,
+                    "edgecolor": GOLD,
+                    "linewidth": 0.8,
+                    "alpha": 0.96,
                 },
                 zorder=4,
             )
@@ -176,25 +213,32 @@ class ScoreChartWidget(QWidget):
             and estimated_worst_key != estimated_best_key
         ):
             estimated_worst_index = visible_cms.index(estimated_worst_key)
+
             axis.axvline(
                 estimated_worst_index,
                 color=WORST_COL,
-                linewidth=1.5,
+                linewidth=1.4,
                 linestyle=":",
                 zorder=3,
-                alpha=0.85,
+                alpha=0.95,
             )
 
-            label_x = estimated_worst_index + 0.38
+            worst_label_y = y_max - (score_range * 0.22)
+            label_x = estimated_worst_index + 0.22
             label_align = "left"
 
             if estimated_worst_index >= len(visible_cms) - 2:
-                label_x = estimated_worst_index - 0.38
+                label_x = estimated_worst_index - 0.22
                 label_align = "right"
+
+            if estimated_best_key is not None:
+                estimated_best_index = visible_cms.index(estimated_best_key)
+                if abs(estimated_worst_index - estimated_best_index) <= 1:
+                    worst_label_y = y_max - (score_range * 0.38)
 
             axis.text(
                 label_x,
-                max_score * 0.86,
+                worst_label_y,
                 f"worst\n~{estimated_worst_cm:.4g} cm",
                 color=WORST_COL,
                 fontsize=8,
@@ -202,62 +246,65 @@ class ScoreChartWidget(QWidget):
                 ha=label_align,
                 fontfamily="Consolas",
                 bbox={
-                    "boxstyle": "round,pad=0.22",
-                    "facecolor": BG2,
-                    "edgecolor": "none",
-                    "alpha": 0.92,
+                    "boxstyle": "round,pad=0.24",
+                    "facecolor": WORST_BG,
+                    "edgecolor": WORST_COL,
+                    "linewidth": 0.8,
+                    "alpha": 0.96,
                 },
                 zorder=4,
             )
 
         axis.set_xticks(x_positions)
+
+        x_tick_labels = []
+        for cm_value in visible_cms:
+            x_tick_labels.append(f"{cm_value:.4g}")
+
         axis.set_xticklabels(
-            [f"{cm_value:.4g}" for cm_value in visible_cms],
+            x_tick_labels,
             color=TEXT2,
             fontsize=8,
             fontfamily="Consolas",
         )
+
         axis.set_ylabel("Best Score", color=TEXT2, fontsize=9)
         axis.set_xlabel("cm / 360", color=TEXT2, fontsize=9)
-        axis.tick_params(colors=TEXT2, length=3, labelsize=8)
-        axis.tick_params(axis="y", colors=TEXT2)
+
+        axis.tick_params(axis="x", colors=TEXT2, length=3, labelsize=8, pad=6)
+        axis.tick_params(axis="y", colors=TEXT2, length=3, labelsize=8)
 
         for spine in axis.spines.values():
             spine.set_color(BG3)
 
-        axis.set_ylim(bottom=max(0, min_score * 0.90), top=max_score * 1.20)
-        axis.margins(x=0.04)
-        axis.grid(axis="y", color=BG3, linewidth=0.8, zorder=0)
-        axis.set_axisbelow(True)
+        legend_handles = []
 
-        legend_handles = [
-            mpatches.Patch(
-                color=GOLD,
-                label=(
-                    f"Est. best (~{estimated_best_cm:.4g} cm {estimated_best_method})"
-                    if estimated_best_cm is not None
-                    else "Est. best"
-                ),
-            ),
-            mpatches.Patch(
-                color=WORST_COL,
-                label=(
-                    f"Worst (~{estimated_worst_cm:.4g} cm {estimated_worst_method})"
-                    if estimated_worst_cm is not None
-                    else "Worst"
-                ),
-            ),
+        if estimated_best_cm is not None:
+            legend_handles.append(
+                mpatches.Patch(
+                    color=GOLD,
+                    label=f"Est. best: ~{estimated_best_cm:.4g} cm ({estimated_best_method})",
+                )
+            )
+
+        if estimated_worst_cm is not None:
+            legend_handles.append(
+                mpatches.Patch(
+                    color=WORST_COL,
+                    label=f"Worst: ~{estimated_worst_cm:.4g} cm ({estimated_worst_method})",
+                )
+            )
+
+        legend_handles.append(
             mpatches.Patch(
                 color=ACCENT,
                 label="Other tested cm",
-            ),
-        ]
+            )
+        )
 
-        axis.legend(
+        legend = axis.legend(
             handles=legend_handles,
-            loc="upper center",
-            bbox_to_anchor=(0.5, -0.16),
-            ncol=3,
+            loc="upper left",
             facecolor=BG3,
             edgecolor=BG3,
             labelcolor=TEXT2,
@@ -265,9 +312,20 @@ class ScoreChartWidget(QWidget):
             framealpha=1.0,
             borderpad=0.5,
             handlelength=1.2,
-            handletextpad=0.4,
-            columnspacing=1.0,
+            handletextpad=0.5,
+            columnspacing=0.8,
         )
 
-        self.figure.tight_layout(pad=0.8, rect=(0, 0.08, 1, 1))
+        if legend is not None:
+            legend.set_zorder(5)
+
+        self.figure.subplots_adjust(left=0.09, right=0.985, top=0.93, bottom=0.16)
         self.canvas.draw()
+
+    def save_chart_image(self, output_path: str):
+        self.figure.savefig(
+        output_path,
+        dpi=200,
+        facecolor=self.figure.get_facecolor(),
+        bbox_inches="tight",
+        )

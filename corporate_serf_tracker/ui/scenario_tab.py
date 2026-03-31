@@ -1,11 +1,15 @@
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
+    QFileDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QVBoxLayout,
@@ -13,13 +17,13 @@ from PySide6.QtWidgets import (
 )
 
 from corporate_serf_tracker.formatting import fmt_score
-from corporate_serf_tracker.ui import chart_widget
 from corporate_serf_tracker.ui.chart_widget import ScoreChartWidget
 from corporate_serf_tracker.ui.scenario_data import (
     build_summary_stats,
     parse_optional_float,
 )
 from corporate_serf_tracker.ui.sensitivity_table import SensitivityTableWidget
+from datetime import datetime
 
 
 class ScenarioTab(QWidget):
@@ -123,9 +127,124 @@ class ScenarioTab(QWidget):
         layout.addWidget(max_label)
         layout.addWidget(self.cm_max_input)
         layout.addWidget(reset_button)
+        export_button = QPushButton("Export PDF")
+        export_button.clicked.connect(self._handle_export_pdf)
+
+        layout.addWidget(export_button)
+
         layout.addStretch(1)
 
         return container
+
+    def _handle_export_pdf(self):
+        import tempfile
+
+        cm_min = parse_optional_float(self.cm_min_text)
+        cm_max = parse_optional_float(self.cm_max_text)
+
+        summary_stats = build_summary_stats(
+            plays=self.plays,
+            assignments=self.assignments,
+            last_8_only=self.last_8_only,
+            cm_min=cm_min,
+            cm_max=cm_max,
+        )
+
+        from corporate_serf_tracker.export.pdf_export import export_scenario_pdf
+
+        last_export_directory = getattr(self.app_state, "last_export_directory", "")
+
+        if not last_export_directory:
+            default_directory = str(Path.home() / "Documents")
+        else:
+            default_directory = last_export_directory
+
+        timestamp_text = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        safe_file_name = (
+            f"{self.scenario_name.replace(' ', '_')}_{timestamp_text}_report.pdf"
+        )
+        default_path = str(Path(default_directory) / safe_file_name)
+
+        output_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export PDF Report",
+            default_path,
+            "PDF Files (*.pdf)",
+        )
+
+        if not output_path:
+            return
+
+        if not output_path.lower().endswith(".pdf"):
+            output_path = f"{output_path}.pdf"
+
+        temporary_chart_path = None
+
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
+                temporary_chart_path = temp_file.name
+
+            if hasattr(self, "chart_widget") and self.chart_widget is not None:
+                self.chart_widget.save_chart_image(temporary_chart_path)
+
+            export_scenario_pdf(
+                output_path=output_path,
+                scenario_name=self.scenario_name,
+                summary_stats=summary_stats,
+                by_cm_scores=summary_stats["by_cm_scores"],
+                filters={
+                    "last_8_only": self.last_8_only,
+                    "cm_min": self.cm_min_text,
+                    "cm_max": self.cm_max_text,
+                },
+                chart_image_path=temporary_chart_path,
+            )
+
+            export_directory = str(Path(output_path).parent)
+            self.app_state.last_export_directory = export_directory
+            self.save_ui_state_callback()
+
+            message_box = QMessageBox(self)
+            message_box.setIcon(QMessageBox.Icon.Information)
+            message_box.setWindowTitle("Export Complete")
+            message_box.setText(f"Saved PDF report to:\n{output_path}")
+            message_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+
+            message_box.setStyleSheet("""
+            QMessageBox {
+            background-color: #0f1822;
+            }
+
+            QLabel {
+            color: #d3dbe5;
+            font-size: 12px;
+            }
+
+            QPushButton {
+            background-color: #1a2330;
+            color: #aab4c0;
+            border: 1px solid #344152;
+            padding: 6px 14px;
+            min-width: 60px;
+            }
+
+            QPushButton:hover {
+            color: #f5f7fa;
+            }
+            """)
+
+            message_box.exec()
+        except Exception as error:
+            QMessageBox.critical(
+                self,
+                "Export Failed",
+                f"Could not export PDF.\n\n{error}",
+            )
+        finally:
+            if temporary_chart_path:
+                temporary_path_object = Path(temporary_chart_path)
+                if temporary_path_object.exists():
+                    temporary_path_object.unlink()
 
     def _handle_filters_changed(self):
         self.last_8_only = self.last_8_checkbox.isChecked()
@@ -246,26 +365,92 @@ class ScenarioTab(QWidget):
         stats_grid.setHorizontalSpacing(10)
         stats_grid.setVerticalSpacing(10)
 
+        best_score = summary_stats["best_score"]
+        median_score = summary_stats["median_score"]
+
+        overall_best_subtext = ""
+        if median_score and median_score > 0:
+            difference_percent = ((best_score - median_score) / median_score) * 100
+            overall_best_subtext = f"{difference_percent:+.1f}% vs median"
+
         stat_cards = [
-            ("OVERALL BEST", fmt_score(summary_stats["best_score"]), "goldValue"),
-            ("CM FOR BEST", summary_stats["cm_for_best_label"], "accentValue"),
-            ("BEST CROSSHAIR", summary_stats["best_crosshair_label"], "accentValue"),
-            ("MEDIAN", fmt_score(summary_stats["median_score"]), "defaultValue"),
-            ("TOTAL PLAYS", str(summary_stats["total_plays"]), "defaultValue"),
-            ("EST. BEST CM", summary_stats["estimated_best_label"], "greenValue"),
-            ("WORST CM", summary_stats["worst_cm_label"], "worstValue"),
-            ("NEXT CM TO TEST", summary_stats["next_cm_label"], "greenValue"),
+            {
+                "title": "OVERALL BEST",
+                "value": fmt_score(best_score),
+                "value_style": "heroGoldValue",
+                "secondary_text": overall_best_subtext,
+                "secondary_style": "positiveSecondaryValue",
+                "allow_wrap": False,
+            },
+            {
+                "title": "CM FOR BEST",
+                "value": summary_stats["cm_for_best_label"],
+                "value_style": "heroAccentValue",
+                "secondary_text": "",
+                "secondary_style": "statSecondaryText",
+                "allow_wrap": False,
+            },
+            {
+                "title": "BEST CROSSHAIR",
+                "value": summary_stats["best_crosshair_label"],
+                "value_style": "heroAccentValue",
+                "secondary_text": "",
+                "secondary_style": "statSecondaryText",
+                "allow_wrap": True,
+            },
+            {
+                "title": "MEDIAN",
+                "value": fmt_score(median_score),
+                "value_style": "heroDefaultValue",
+                "secondary_text": "",
+                "secondary_style": "statSecondaryText",
+                "allow_wrap": False,
+            },
+            {
+                "title": "TOTAL PLAYS",
+                "value": str(summary_stats["total_plays"]),
+                "value_style": "defaultValue",
+                "secondary_text": "",
+                "secondary_style": "statSecondaryText",
+                "allow_wrap": False,
+            },
+            {
+                "title": "EST. BEST CM",
+                "value": summary_stats["estimated_best_label"],
+                "value_style": "greenValue",
+                "secondary_text": "",
+                "secondary_style": "statSecondaryText",
+                "allow_wrap": True,
+            },
+            {
+                "title": "WORST CM",
+                "value": summary_stats["worst_cm_label"],
+                "value_style": "worstValue",
+                "secondary_text": "",
+                "secondary_style": "statSecondaryText",
+                "allow_wrap": True,
+            },
+            {
+                "title": "NEXT CM TO TEST",
+                "value": summary_stats["next_cm_label"],
+                "value_style": "greenValue",
+                "secondary_text": "",
+                "secondary_style": "statSecondaryText",
+                "allow_wrap": True,
+            },
         ]
 
         for stat_index, stat_data in enumerate(stat_cards):
-            title_text, value_text, value_style = stat_data
             row_index = stat_index // 4
             column_index = stat_index % 4
 
             stat_card = self._build_stat_card(
-                title_text=title_text,
-                value_text=value_text,
-                value_style=value_style,
+                title_text=stat_data["title"],
+                value_text=stat_data["value"],
+                value_style=stat_data["value_style"],
+                secondary_text=stat_data["secondary_text"],
+                secondary_style=stat_data["secondary_style"],
+                allow_wrap=stat_data["allow_wrap"],
             )
             stats_grid.addWidget(stat_card, row_index, column_index)
 
@@ -309,10 +494,10 @@ class ScenarioTab(QWidget):
         chart_content_layout.setSpacing(0)
         self.chart_content_widget.setLayout(chart_content_layout)
 
-        chart_widget = ScoreChartWidget(by_cm_scores=by_cm_scores)
-        chart_widget.setMinimumHeight(260)
+        self.chart_widget = ScoreChartWidget(by_cm_scores=by_cm_scores)
+        self.chart_widget.setMinimumHeight(260)
 
-        chart_content_layout.addWidget(chart_widget)
+        chart_content_layout.addWidget(self.chart_widget)
         self.chart_content_widget.setVisible(self.is_chart_expanded)
 
         layout.addWidget(header_row)
@@ -353,14 +538,20 @@ class ScenarioTab(QWidget):
         return container
 
     def _build_stat_card(
-        self, title_text: str, value_text: str, value_style: str
+        self,
+        title_text: str,
+        value_text: str,
+        value_style: str,
+        secondary_text: str = "",
+        secondary_style: str = "statSecondaryText",
+        allow_wrap: bool = False,
     ) -> QWidget:
         container = QFrame()
         container.setObjectName("statCard")
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(12, 10, 12, 10)
-        layout.setSpacing(4)
+        layout.setContentsMargins(12, 10, 12, 8)
+        layout.setSpacing(3)
         container.setLayout(layout)
 
         title_label = QLabel(title_text)
@@ -368,13 +559,20 @@ class ScenarioTab(QWidget):
 
         value_label = QLabel(value_text)
         value_label.setObjectName(value_style)
-        value_label.setWordWrap(True)
+        value_label.setWordWrap(allow_wrap)
         value_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
 
         layout.addWidget(title_label)
         layout.addWidget(value_label)
+
+        if secondary_text:
+            secondary_label = QLabel(secondary_text)
+            secondary_label.setObjectName(secondary_style)
+            secondary_label.setWordWrap(False)
+            layout.addWidget(secondary_label)
+
         layout.addStretch(1)
 
         return container
@@ -407,27 +605,23 @@ class ScenarioTab(QWidget):
         border: 1px solid #344152;
       }
 
+      #sectionHeading {
+        color: #d3dbe5;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      #filterLabel {
+        color: #c4ced9;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
       #statCard {
         background: #16202c;
         border: 1px solid #344152;
-        min-height: 92px;
-      }
-
-      #scenarioTitle {
-        color: #3fbcde;
-        font-size: 18px;
-        font-weight: 700;
-      }
-
-      #scenarioMeta {
-        color: #aab4c0;
-        font-size: 12px;
-      }
-
-      #sectionHeading {
-        color: #aab4c0;
-        font-size: 11px;
-        font-weight: 700;
+        min-height: 90px;
+        max-height: 110px;
       }
 
       #statTitle {
@@ -436,50 +630,78 @@ class ScenarioTab(QWidget):
         font-weight: 700;
       }
 
-      #filterLabel {
-        color: #aab4c0;
-        font-size: 11px;
+      #heroGoldValue {
+        color: #e8d84a;
+        font-size: 24px;
+        font-weight: 800;
+      }
+
+      #heroAccentValue {
+        color: #5fd6ff;
+        font-size: 24px;
+        font-weight: 800;
+      }
+
+      #heroDefaultValue {
+        color: #ffffff;
+        font-size: 24px;
+        font-weight: 800;
       }
 
       #goldValue {
         color: #e8d84a;
-        font-size: 16px;
+        font-size: 18px;
         font-weight: 700;
       }
 
       #accentValue {
         color: #3fbcde;
-        font-size: 16px;
+        font-size: 18px;
         font-weight: 700;
       }
 
       #greenValue {
         color: #01986f;
-        font-size: 16px;
+        font-size: 18px;
         font-weight: 700;
       }
 
       #defaultValue {
         color: #f5f7fa;
-        font-size: 16px;
+        font-size: 18px;
         font-weight: 700;
       }
 
       #worstValue {
         color: #ff5c93;
-        font-size: 16px;
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      #statSecondaryText {
+        color: #7f8fa3;
+        font-size: 10px;
+        font-weight: 600;
+      }
+
+      #positiveSecondaryValue {
+        color: #01986f;
+        font-size: 10px;
         font-weight: 700;
       }
 
       QLineEdit {
         background: #1a2330;
         color: #f5f7fa;
-        border: 1px solid #344152;
+        border: 1px solid #3f4f63;
         padding: 6px 8px;
+        font-size: 12px;
       }
 
       QCheckBox {
-        color: #f5f7fa;
+        color: #d3dbe5;
+        font-size: 12px;
+        font-weight: 600;
       }
 
       QPushButton {
@@ -488,19 +710,19 @@ class ScenarioTab(QWidget):
         border: 1px solid #344152;
         padding: 6px 10px;
       }
-      
-            QPushButton#sectionToggleButton {
+
+      QPushButton#sectionToggleButton {
         background: transparent;
-        color: #81ecff;
+        color: #d3dbe5;
         border: none;
         padding: 0;
         text-align: left;
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 700;
       }
 
       QPushButton#sectionToggleButton:hover {
-        color: #a6efff;
+        color: #f5f7fa;
         border: none;
       }
       """

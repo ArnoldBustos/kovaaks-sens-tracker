@@ -50,7 +50,6 @@ class MainWindow(QMainWindow):
     def _build_window(self):
         self._build_status_bar()
         self._build_central_layout()
-        self._build_menu()
 
     def _build_status_bar(self):
         status_bar = QStatusBar()
@@ -102,18 +101,12 @@ class MainWindow(QMainWindow):
     def _build_top_bar(self) -> QWidget:
         top_bar = QFrame()
         top_bar.setObjectName("topBar")
-        top_bar.setFixedHeight(74)
+        top_bar.setFixedHeight(52)
 
         layout = QHBoxLayout()
-        layout.setContentsMargins(16, 8, 16, 8)
-        layout.setSpacing(12)
+        layout.setContentsMargins(12, 6, 12, 6)
+        layout.setSpacing(10)
         top_bar.setLayout(layout)
-
-        title_container = QWidget()
-        title_layout = QVBoxLayout()
-        title_layout.setContentsMargins(0, 0, 0, 0)
-        title_layout.setSpacing(2)
-        title_container.setLayout(title_layout)
 
         title_label = QLabel("Kovaaks Sensitivity Performance Tracker")
         title_label.setObjectName("titleLabel")
@@ -121,10 +114,16 @@ class MainWindow(QMainWindow):
         subtitle_label = QLabel("Inspired by the Corporate Serf method")
         subtitle_label.setObjectName("subtitleLabel")
 
-        title_layout.addWidget(title_label)
-        title_layout.addWidget(subtitle_label)
+        title_row = QWidget()
+        title_row_layout = QHBoxLayout()
+        title_row_layout.setContentsMargins(0, 0, 0, 0)
+        title_row_layout.setSpacing(10)
+        title_row.setLayout(title_row_layout)
 
-        layout.addWidget(title_container)
+        title_row_layout.addWidget(title_label)
+        title_row_layout.addWidget(subtitle_label)
+
+        layout.addWidget(title_row)
         layout.addStretch(1)
 
         self.folder_label = QLabel("Waiting for stats folder...")
@@ -134,6 +133,7 @@ class MainWindow(QMainWindow):
         )
 
         refresh_button = QPushButton("Refresh")
+        refresh_button.setObjectName("toolbarButton")
         refresh_button.clicked.connect(self._refresh)
 
         select_folder_button = QPushButton("Select Stats Folder")
@@ -270,25 +270,36 @@ class MainWindow(QMainWindow):
       }
 
       #topBar {
-        background: #131a24;
+        background: #111923;
         border-bottom: 1px solid #344152;
       }
 
       #titleLabel {
         color: #3fbcde;
-        font-size: 14px;
+        font-size: 15px;
         font-weight: 700;
       }
 
       #subtitleLabel {
         color: #aab4c0;
-        font-size: 10px;
+        font-size: 11px;
       }
 
       #folderLabel {
         color: #aab4c0;
-        font-size: 12px;
-        padding-right: 8px;
+        font-size: 11px;
+        padding: 4px 8px;
+      }
+
+      QPushButton#toolbarButton {
+        background: #1a2330;
+        color: #d3dbe5;
+        border: 1px solid #344152;
+        padding: 5px 10px;
+      }
+
+      QPushButton#toolbarButton:hover {
+        border: 1px solid #3fbcde;
       }
 
       #sidebar {
@@ -521,7 +532,7 @@ QScrollBar::sub-page:horizontal {
 
         folder_name = Path(self.state.folder_path).name
         scenario_count = len(self.state.all_scenarios)
-        self.folder_label.setText(f"{folder_name} ({scenario_count} scenarios)")
+        self.folder_label.setText(f"{scenario_count} scenarios")
         self.statusBar().showMessage(f"Loaded {scenario_count} scenarios")
 
         self._populate_scenario_list()
