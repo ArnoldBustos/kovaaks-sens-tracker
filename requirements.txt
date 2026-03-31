@@ -1,2 +1,5 @@
 numpy
 matplotlib
+PySide6
+pandas
+reportlab

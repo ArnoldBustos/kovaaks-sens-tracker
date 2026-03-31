@@ -1,9 +1,15 @@
-from corporate_serf_tracker.app import App
+import sys
+
+from PySide6.QtWidgets import QApplication
+
+from corporate_serf_tracker.ui.main_window import MainWindow
 
 
 def main():
-    app = App()
-    app.mainloop()
+    qt_app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(qt_app.exec())
 
 
 if __name__ == "__main__":
