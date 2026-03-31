@@ -33,6 +33,9 @@ class ScenarioTab(QWidget):
         self.cm_min_text = ""
         self.cm_max_text = ""
 
+        self.is_chart_expanded = True
+        self.is_table_expanded = True
+
         self._build_ui()
         self._apply_styles()
         self._refresh_content()
@@ -51,57 +54,27 @@ class ScenarioTab(QWidget):
         scroll_content = QWidget()
         self.root_layout = QVBoxLayout()
         self.root_layout.setContentsMargins(16, 16, 16, 16)
-        self.root_layout.setSpacing(12)
+        self.root_layout.setSpacing(10)
         scroll_content.setLayout(self.root_layout)
 
-        self.header_row = self._build_header_row()
         self.filter_row = self._build_filter_row()
 
         self.overview_container = QWidget()
         self.content_container = QWidget()
 
-        self.root_layout.addWidget(self.header_row)
-        self.root_layout.addWidget(self.filter_row)
         self.root_layout.addWidget(self.overview_container)
+        self.root_layout.addWidget(self.filter_row)
         self.root_layout.addWidget(self.content_container)
 
         scroll_area.setWidget(scroll_content)
         outer_layout.addWidget(scroll_area)
-
-    def _build_header_row(self) -> QWidget:
-        container = QFrame()
-        container.setObjectName("sectionCard")
-
-        layout = QHBoxLayout()
-        layout.setContentsMargins(14, 12, 14, 12)
-        layout.setSpacing(10)
-        container.setLayout(layout)
-
-        title_label = QLabel(self.scenario_name)
-        title_label.setObjectName("scenarioTitle")
-
-        self.play_count_label = QLabel(f"Loaded plays: {len(self.plays)}")
-        self.play_count_label.setObjectName("scenarioMeta")
-
-        left_column = QWidget()
-        left_layout = QVBoxLayout()
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(2)
-        left_column.setLayout(left_layout)
-        left_layout.addWidget(title_label)
-        left_layout.addWidget(self.play_count_label)
-
-        layout.addWidget(left_column)
-        layout.addStretch(1)
-
-        return container
 
     def _build_filter_row(self) -> QWidget:
         container = QFrame()
         container.setObjectName("sectionCard")
 
         layout = QHBoxLayout()
-        layout.setContentsMargins(14, 10, 14, 10)
+        layout.setContentsMargins(14, 8, 14, 8)
         layout.setSpacing(10)
         container.setLayout(layout)
 
@@ -170,8 +143,6 @@ class ScenarioTab(QWidget):
             cm_max=cm_max,
         )
 
-        self.play_count_label.setText(f"Loaded plays: {summary_stats['total_plays']}")
-
         self._replace_widget(
             container_widget=self.overview_container,
             replacement_widget=self._build_overview_section(summary_stats),
@@ -199,6 +170,49 @@ class ScenarioTab(QWidget):
                     child_widget.deleteLater()
 
         layout.addWidget(replacement_widget)
+
+    def _toggle_chart_section(self):
+        self.is_chart_expanded = not self.is_chart_expanded
+
+        if hasattr(self, "chart_content_widget"):
+            self.chart_content_widget.setVisible(self.is_chart_expanded)
+
+        if hasattr(self, "chart_toggle_button"):
+            self.chart_toggle_button.setText(
+                "▼ CHART" if self.is_chart_expanded else "▶ CHART"
+            )
+
+    def _toggle_table_section(self):
+        self.is_table_expanded = not self.is_table_expanded
+
+        if hasattr(self, "table_content_widget"):
+            self.table_content_widget.setVisible(self.is_table_expanded)
+
+        if hasattr(self, "table_toggle_button"):
+            self.table_toggle_button.setText(
+                "▼ SENSITIVITY CHART"
+                if self.is_table_expanded
+                else "▶ SENSITIVITY CHART"
+            )
+
+    def _build_section_toggle_button(self, text: str, click_handler) -> QPushButton:
+        toggle_button = QPushButton(text)
+        toggle_button.setObjectName("sectionToggleButton")
+        toggle_button.clicked.connect(click_handler)
+        return toggle_button
+
+    def _build_section_header_row(self, toggle_button: QPushButton) -> QWidget:
+        header_row = QWidget()
+
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(8)
+        header_row.setLayout(header_layout)
+
+        header_layout.addWidget(toggle_button)
+        header_layout.addStretch(1)
+
+        return header_row
 
     def _build_overview_section(self, summary_stats: dict) -> QWidget:
         container = QFrame()
@@ -268,34 +282,58 @@ class ScenarioTab(QWidget):
         layout.setSpacing(8)
         container.setLayout(layout)
 
-        title_label = QLabel("CHART")
-        title_label.setObjectName("sectionHeading")
+        self.chart_toggle_button = self._build_section_toggle_button(
+            "▼ CHART" if self.is_chart_expanded else "▶ CHART",
+            self._toggle_chart_section,
+        )
+        header_row = self._build_section_header_row(self.chart_toggle_button)
+
+        self.chart_content_widget = QWidget()
+        chart_content_layout = QVBoxLayout()
+        chart_content_layout.setContentsMargins(0, 0, 0, 0)
+        chart_content_layout.setSpacing(0)
+        self.chart_content_widget.setLayout(chart_content_layout)
 
         chart_widget = ScoreChartWidget(by_cm_scores=by_cm_scores)
         chart_widget.setMinimumHeight(360)
 
-        layout.addWidget(title_label)
-        layout.addWidget(chart_widget)
+        chart_content_layout.addWidget(chart_widget)
+        self.chart_content_widget.setVisible(self.is_chart_expanded)
+
+        layout.addWidget(header_row)
+        layout.addWidget(self.chart_content_widget)
 
         return container
 
     def _build_table_card(self, by_cm_scores: dict) -> QWidget:
         container = QFrame()
-        container.setObjectName("sectionCard")
+        container.setObjectName("tableSectionCard")
 
         layout = QVBoxLayout()
         layout.setContentsMargins(14, 14, 14, 14)
         layout.setSpacing(8)
         container.setLayout(layout)
 
-        title_label = QLabel("SENSITIVITY TABLE")
-        title_label.setObjectName("sectionHeading")
+        self.table_toggle_button = self._build_section_toggle_button(
+            "▼ SENSITIVITY CHART" if self.is_table_expanded else "▶ SENSITIVITY CHART",
+            self._toggle_table_section,
+        )
+        header_row = self._build_section_header_row(self.table_toggle_button)
+
+        self.table_content_widget = QWidget()
+        table_content_layout = QVBoxLayout()
+        table_content_layout.setContentsMargins(0, 0, 0, 0)
+        table_content_layout.setSpacing(0)
+        self.table_content_widget.setLayout(table_content_layout)
 
         table_widget = SensitivityTableWidget(by_cm_scores=by_cm_scores)
-        table_widget.setMinimumHeight(280)
+        table_widget.setMinimumHeight(260)
 
-        layout.addWidget(title_label)
-        layout.addWidget(table_widget)
+        table_content_layout.addWidget(table_widget)
+        self.table_content_widget.setVisible(self.is_table_expanded)
+
+        layout.addWidget(header_row)
+        layout.addWidget(self.table_content_widget)
 
         return container
 
@@ -337,6 +375,17 @@ class ScenarioTab(QWidget):
       QScrollArea > QWidget > QWidget {
         background: #0b0f14;
       }
+      
+      #tableSectionCard {
+        background: #131a24;
+        border: none;
+        }
+
+        #sectionHeadingAccent {
+        color: #81ecff;
+        font-size: 11px;
+        font-weight: 700;
+        }
 
       #sectionCard {
         background: #0f1822;
@@ -423,6 +472,21 @@ class ScenarioTab(QWidget):
         color: #aab4c0;
         border: 1px solid #344152;
         padding: 6px 10px;
+      }
+      
+            QPushButton#sectionToggleButton {
+        background: transparent;
+        color: #81ecff;
+        border: none;
+        padding: 0;
+        text-align: left;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      QPushButton#sectionToggleButton:hover {
+        color: #a6efff;
+        border: none;
       }
       """
         )

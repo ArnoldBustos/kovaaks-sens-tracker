@@ -2,10 +2,54 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 import matplotlib.patches as mpatches
 
-from PySide6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtGui import QWheelEvent
+from PySide6.QtWidgets import QScrollArea, QVBoxLayout, QWidget
 
 from corporate_serf_tracker.analysis import estimate_best_cm, estimate_worst_cm
 from corporate_serf_tracker.constants import ACCENT, BG2, BG3, GOLD, TEXT2, WORST_COL
+
+class ScrollPassthroughCanvas(FigureCanvasQTAgg):
+    def wheelEvent(self, event: QWheelEvent):
+        scroll_area = self._find_parent_scroll_area()
+
+        if scroll_area is None:
+            super().wheelEvent(event)
+            return
+
+        vertical_scrollbar = scroll_area.verticalScrollBar()
+
+        if vertical_scrollbar is None:
+            super().wheelEvent(event)
+            return
+
+        delta_y = event.angleDelta().y()
+
+        if delta_y == 0:
+            super().wheelEvent(event)
+            return
+
+        step_amount = 60
+
+        if delta_y > 0:
+            vertical_scrollbar.setValue(
+                vertical_scrollbar.value() - step_amount
+            )
+        else:
+            vertical_scrollbar.setValue(
+                vertical_scrollbar.value() + step_amount
+            )
+
+        event.accept()
+
+    def _find_parent_scroll_area(self):
+        parent_widget = self.parentWidget()
+
+        while parent_widget is not None:
+            if isinstance(parent_widget, QScrollArea):
+                return parent_widget
+            parent_widget = parent_widget.parentWidget()
+
+        return None
 
 
 class ScoreChartWidget(QWidget):
@@ -18,7 +62,7 @@ class ScoreChartWidget(QWidget):
         self.setLayout(root_layout)
 
         self.figure = Figure(figsize=(7.2, 4.6), dpi=100)
-        self.canvas = FigureCanvasQTAgg(self.figure)
+        self.canvas = ScrollPassthroughCanvas(self.figure)
 
         root_layout.addWidget(self.canvas)
 

@@ -196,7 +196,7 @@ class MainWindow(QMainWindow):
         self.tab_widget = QTabWidget()
         self.tab_widget.currentChanged.connect(self._handle_tab_changed)
         self.tab_widget.setTabsClosable(True)
-        
+
         self.tab_widget.tabCloseRequested.connect(self._handle_tab_close_requested)
 
         self.empty_state_container = self._build_empty_state()
@@ -396,6 +396,60 @@ class MainWindow(QMainWindow):
         color: #627082;
         font-size: 12px;
       }
+      
+      QScrollBar:vertical {
+  background: #0f1822;
+  width: 10px;
+  border: none;
+  margin: 0;
+}
+
+QScrollBar::handle:vertical {
+  background: #22334a;
+  min-height: 28px;
+  border: none;
+}
+
+QScrollBar::handle:vertical:hover {
+  background: #2b3f59;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+  height: 0;
+}
+
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+  background: transparent;
+}
+
+QScrollBar:horizontal {
+  background: #0f1822;
+  height: 10px;
+  border: none;
+  margin: 0;
+}
+
+QScrollBar::handle:horizontal {
+  background: #22334a;
+  min-width: 28px;
+  border: none;
+}
+
+QScrollBar::handle:horizontal:hover {
+  background: #2b3f59;
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+  width: 0;
+}
+
+QScrollBar::add-page:horizontal,
+QScrollBar::sub-page:horizontal {
+  background: transparent;
+}
       
       """
         )
