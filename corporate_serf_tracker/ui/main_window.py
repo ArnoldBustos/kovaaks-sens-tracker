@@ -33,6 +33,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.state = AppState(max_selected=MAX_SELECTED)
         self.storage = load_data()
+
+        persisted_ui_state = self.storage.get("ui_state", {})
+        self.state.apply_persisted_dict(persisted_ui_state)
         self.visible_scenario_names = []
         self.search_placeholder_text = "Search scenarios..."
 
@@ -454,7 +457,18 @@ QScrollBar::sub-page:horizontal {
       """
         )
 
+    def _save_ui_state(self):
+        self.storage["ui_state"] = self.state.to_persisted_dict()
+        from corporate_serf_tracker.storage import save_data
+        save_data(self.storage)
+
     def _attempt_default_load(self):
+        saved_folder_path = self.state.folder_path
+
+        if saved_folder_path and os.path.exists(saved_folder_path):
+            self._load_folder()
+            return
+
         if os.path.exists(DEFAULT_STATS_PATH):
             self.state.set_folder_path(DEFAULT_STATS_PATH)
             self._load_folder()
@@ -474,6 +488,7 @@ QScrollBar::sub-page:horizontal {
             return
 
         self.state.set_folder_path(selected_folder)
+        self._save_ui_state()
         self._load_folder()
 
     def _refresh(self):
@@ -562,6 +577,7 @@ QScrollBar::sub-page:horizontal {
             self.statusBar().showMessage(f"Removed {scenario_name}")
 
         self.selected_count_label.setText(self.state.selected_count_label())
+        self._save_ui_state()
         self._rebuild_tabs()
         self._sync_list_selection_state()
 
@@ -576,6 +592,7 @@ QScrollBar::sub-page:horizontal {
         self.state.deselect_scenario(scenario_name)
 
         self.selected_count_label.setText(self.state.selected_count_label())
+        self._save_ui_state()
         self._rebuild_tabs()
         self._sync_list_selection_state()
         self.statusBar().showMessage(f"Closed {scenario_name}")
@@ -593,6 +610,8 @@ QScrollBar::sub-page:horizontal {
                 plays=plays,
                 assignments=assignments,
                 ranks=ranks,
+                app_state=self.state,
+                save_ui_state_callback=self._save_ui_state,
             )
             tab_label = self._format_tab_name(scenario_name)
             self.tab_widget.addTab(scenario_tab, tab_label)
@@ -621,6 +640,7 @@ QScrollBar::sub-page:horizontal {
             return
 
         self.state.active_tab_name = self.state.selected_scenarios[tab_index]
+        self._save_ui_state()
 
     def _format_tab_name(self, scenario_name: str) -> str:
         max_length = 28

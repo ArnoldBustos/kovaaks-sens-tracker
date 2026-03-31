@@ -2,6 +2,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QHeaderView,
+    QHBoxLayout,
+    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -53,13 +55,15 @@ class SensitivityTableWidget(QWidget):
         horizontal_header.setSectionResizeMode(
             1, QHeaderView.ResizeMode.ResizeToContents
         )
-        horizontal_header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        horizontal_header.setSectionResizeMode(
+            2, QHeaderView.ResizeMode.Stretch
+        )
         horizontal_header.setSectionResizeMode(
             3, QHeaderView.ResizeMode.ResizeToContents
         )
-        horizontal_header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
-
-        self.table.setColumnWidth(2, 170)
+        horizontal_header.setSectionResizeMode(
+            4, QHeaderView.ResizeMode.ResizeToContents
+        )
 
         self.table.setStyleSheet(
             """
@@ -93,7 +97,7 @@ class SensitivityTableWidget(QWidget):
 
       QTableWidget::item {
         border: none;
-        padding: 8px 12px;
+        padding: 6px 8px;
       }
 
       QScrollBar:vertical {
@@ -115,12 +119,12 @@ class SensitivityTableWidget(QWidget):
         )
 
         layout.addWidget(self.table)
-        
+
         self.table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         self._populate()
-    
+
     def _update_table_height(self):
         header_height = self.table.horizontalHeader().height()
         row_total = 0
@@ -197,7 +201,7 @@ class SensitivityTableWidget(QWidget):
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
             )
             best_item.setTextAlignment(
-                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
             )
             median_item.setTextAlignment(
                 Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
@@ -233,7 +237,8 @@ class SensitivityTableWidget(QWidget):
             )
 
         self.table.resizeRowsToContents()
-        self.table.verticalHeader().setDefaultSectionSize(40)
+        self.table.verticalHeader().setDefaultSectionSize(28)
+        self._update_table_height()
 
     def _build_bar_widget(
         self,
@@ -244,20 +249,36 @@ class SensitivityTableWidget(QWidget):
     ) -> QWidget:
         outer_widget = QWidget()
         outer_widget.setStyleSheet("background: transparent;")
+        outer_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
 
         outer_layout = QVBoxLayout()
-        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setContentsMargins(10, 4, 20, 4)
         outer_layout.setSpacing(0)
         outer_widget.setLayout(outer_layout)
 
         track_widget = QWidget()
-        track_widget.setFixedSize(120, 10)
-        track_widget.setStyleSheet("background: #202734; border: none;")
+        track_widget.setFixedHeight(8)
+        track_widget.setMinimumWidth(140)
+        track_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
+        track_widget.setStyleSheet(
+            """
+            background: #18212b;
+            border: none;
+            border-radius: 4px;
+            """
+        )
 
         if global_best_score <= 0:
             fill_ratio = 0.0
         else:
             fill_ratio = best_score / global_best_score
+            fill_ratio *= 0.92
 
         if fill_ratio < 0:
             fill_ratio = 0.0
@@ -270,26 +291,46 @@ class SensitivityTableWidget(QWidget):
         elif is_worst_row:
             fill_color = "#ff5c93"
         else:
-            fill_color = "#c7cbd1"
+            fill_color = "#d6dbe3"
 
-        track_widget.setStyleSheet(
-            f"""
-            background: #202734;
-            border: none;
-            """
+        fill_stretch = int(fill_ratio * 100)
+        if fill_stretch < 1:
+            fill_stretch = 1
+
+        empty_stretch = 100 - fill_stretch
+        if empty_stretch < 0:
+            empty_stretch = 0
+
+        track_layout = QHBoxLayout()
+        track_layout.setContentsMargins(0, 0, 0, 0)
+        track_layout.setSpacing(0)
+        track_widget.setLayout(track_layout)
+
+        fill_widget = QWidget()
+        fill_widget.setFixedHeight(8)
+        fill_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
         )
-
-        fill_widget = QWidget(track_widget)
-        fill_width = max(8, int(track_widget.width() * fill_ratio))
-        fill_widget.setGeometry(0, 0, fill_width, track_widget.height())
         fill_widget.setStyleSheet(
             f"""
             background: {fill_color};
             border: none;
+            border-radius: 4px;
             """
         )
 
-        outer_layout.addWidget(track_widget, alignment=Qt.AlignmentFlag.AlignLeft)
+        spacer_widget = QWidget()
+        spacer_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
+        spacer_widget.setStyleSheet("background: transparent; border: none;")
+
+        track_layout.addWidget(fill_widget, fill_stretch)
+        track_layout.addWidget(spacer_widget, empty_stretch)
+
+        outer_layout.addWidget(track_widget)
         return outer_widget
 
     def _style_row(
@@ -306,7 +347,7 @@ class SensitivityTableWidget(QWidget):
     ):
         default_background = QColor("#131a24")
         hover_like_background = QColor("#17202a")
-        best_background = QColor("#12202a")
+        best_background = QColor("#101c26")
         worst_background = QColor("#1d1218")
 
         default_text = QColor("#f5f7fa")

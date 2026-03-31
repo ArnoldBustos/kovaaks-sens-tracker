@@ -135,26 +135,13 @@ class ScoreChartWidget(QWidget):
             x_positions,
             best_scores,
             color=bar_colors,
-            width=0.78,
+            width=0.65,
             zorder=2,
             linewidth=0,
         )
 
         max_score = max(best_scores)
         min_score = min(best_scores)
-        label_offset = max_score * 0.016
-
-        for bar_rect, score_value in zip(bars, best_scores):
-            axis.text(
-                bar_rect.get_x() + (bar_rect.get_width() / 2),
-                bar_rect.get_height() + label_offset,
-                str(int(score_value)),
-                ha="center",
-                va="bottom",
-                color=TEXT2,
-                fontsize=8,
-                fontfamily="Consolas",
-            )
 
         if estimated_best_key is not None:
             estimated_best_index = visible_cms.index(estimated_best_key)
@@ -239,7 +226,7 @@ class ScoreChartWidget(QWidget):
             spine.set_color(BG3)
 
         axis.set_ylim(bottom=max(0, min_score * 0.90), top=max_score * 1.20)
-        axis.margins(x=0.08)
+        axis.margins(x=0.04)
         axis.grid(axis="y", color=BG3, linewidth=0.8, zorder=0)
         axis.set_axisbelow(True)
 
@@ -274,13 +261,13 @@ class ScoreChartWidget(QWidget):
             facecolor=BG3,
             edgecolor=BG3,
             labelcolor=TEXT2,
-            fontsize=8,
+            fontsize=7,
             framealpha=1.0,
-            borderpad=0.6,
-            handlelength=1.6,
-            handletextpad=0.5,
-            columnspacing=1.4,
+            borderpad=0.5,
+            handlelength=1.2,
+            handletextpad=0.4,
+            columnspacing=1.0,
         )
 
-        self.figure.tight_layout(pad=1.2, rect=(0, 0.06, 1, 1))
+        self.figure.tight_layout(pad=0.8, rect=(0, 0.08, 1, 1))
         self.canvas.draw()

@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from corporate_serf_tracker.formatting import fmt_score
+from corporate_serf_tracker.ui import chart_widget
 from corporate_serf_tracker.ui.chart_widget import ScoreChartWidget
 from corporate_serf_tracker.ui.scenario_data import (
     build_summary_stats,
@@ -22,7 +23,15 @@ from corporate_serf_tracker.ui.sensitivity_table import SensitivityTableWidget
 
 
 class ScenarioTab(QWidget):
-    def __init__(self, scenario_name: str, plays: list, assignments: dict, ranks: dict):
+    def __init__(
+        self,
+        scenario_name: str,
+        plays: list,
+        assignments: dict,
+        ranks: dict,
+        app_state,
+        save_ui_state_callback,
+    ):
         super().__init__()
         self.scenario_name = scenario_name
         self.plays = plays
@@ -32,9 +41,11 @@ class ScenarioTab(QWidget):
         self.last_8_only = False
         self.cm_min_text = ""
         self.cm_max_text = ""
+        self.app_state = app_state
+        self.save_ui_state_callback = save_ui_state_callback
 
-        self.is_chart_expanded = True
-        self.is_table_expanded = True
+        self.is_chart_expanded = self.app_state.chart_expanded
+        self.is_table_expanded = self.app_state.table_expanded
 
         self._build_ui()
         self._apply_styles()
@@ -54,7 +65,7 @@ class ScenarioTab(QWidget):
         scroll_content = QWidget()
         self.root_layout = QVBoxLayout()
         self.root_layout.setContentsMargins(16, 16, 16, 16)
-        self.root_layout.setSpacing(10)
+        self.root_layout.setSpacing(6)
         scroll_content.setLayout(self.root_layout)
 
         self.filter_row = self._build_filter_row()
@@ -173,6 +184,8 @@ class ScenarioTab(QWidget):
 
     def _toggle_chart_section(self):
         self.is_chart_expanded = not self.is_chart_expanded
+        self.app_state.chart_expanded = self.is_chart_expanded
+        self.save_ui_state_callback()
 
         if hasattr(self, "chart_content_widget"):
             self.chart_content_widget.setVisible(self.is_chart_expanded)
@@ -184,15 +197,17 @@ class ScenarioTab(QWidget):
 
     def _toggle_table_section(self):
         self.is_table_expanded = not self.is_table_expanded
+        self.app_state.table_expanded = self.is_table_expanded
+        self.save_ui_state_callback()
 
         if hasattr(self, "table_content_widget"):
             self.table_content_widget.setVisible(self.is_table_expanded)
 
         if hasattr(self, "table_toggle_button"):
             self.table_toggle_button.setText(
-                "▼ SENSITIVITY CHART"
+                "▼ PERFORMANCE TABLE"
                 if self.is_table_expanded
-                else "▶ SENSITIVITY CHART"
+                else "▶ PERFORMANCE TABLE"
             )
 
     def _build_section_toggle_button(self, text: str, click_handler) -> QPushButton:
@@ -295,7 +310,7 @@ class ScenarioTab(QWidget):
         self.chart_content_widget.setLayout(chart_content_layout)
 
         chart_widget = ScoreChartWidget(by_cm_scores=by_cm_scores)
-        chart_widget.setMinimumHeight(360)
+        chart_widget.setMinimumHeight(260)
 
         chart_content_layout.addWidget(chart_widget)
         self.chart_content_widget.setVisible(self.is_chart_expanded)
@@ -315,7 +330,7 @@ class ScenarioTab(QWidget):
         container.setLayout(layout)
 
         self.table_toggle_button = self._build_section_toggle_button(
-            "▼ SENSITIVITY CHART" if self.is_table_expanded else "▶ SENSITIVITY CHART",
+            "▼ PERFORMANCE TABLE" if self.is_table_expanded else "▶ PERFORMANCE TABLE",
             self._toggle_table_section,
         )
         header_row = self._build_section_header_row(self.table_toggle_button)
