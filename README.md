@@ -1,83 +1,90 @@
 # Mouse Sensitivity Performance Tracker
 
-Windows-focused desktop app for analyzing KovaaK's sensitivity training data.
+Desktop application for analyzing KovaaK’s sensitivity training data.
 
-Originally inspired by the Corporate Serf sensitivity method, this tool helps players review performance across multiple sensitivities without manually filling out spreadsheets after every run.
-
-Instead of logging results by hand in a spreadsheet, the app parses KovaaK's stats, groups runs by scenario, and surfaces trends through score summaries, recommendations, filtering tools, and embedded charts.
-
-## Status
-
-This project is currently in beta and still under active development.
-
-Current focus areas include:
-- improving UI clarity and usability
-- refining analysis and recommendation behavior
-- polishing public documentation and screenshots
-- preparing for a Windows-friendly packaged release
-
-## Why I Built It
-
-The Corporate Serf method is based on the idea that training aim scenarios at different sensitivities can expose specific weaknesses.
-
-For example:
-- Weaker low-sensitivity performance may indicate weaker shoulder-driven aiming.
-- Weaker high-sensitivity performance may point to weaker fingertip or fine-control aim.
-
-The original workflow often required manually entering scores into a Google Sheet after each session. This app was developed as a desktop alternative to reduce friction and simplify the process of repeating the analysis
+This tool parses KovaaK’s stats, groups runs by scenario, and helps identify optimal sensitivities through summary stats, charts, and recommendations.
 
 ## Features
 
-- Load a KovaaK's stats folder and automatically group runs by scenario
-- Compare best score, median score, total plays, estimated best cm/360, and estimated worst cm/360
-- Recommend the next cm/360 to test based on current data gaps
-- Track the best-performing crosshair and crosshair scale from the highest scoring run
-- Manually tag runs with cm/360 values when the source CSV does not include them
-- Filter by cm/360 range and hide specific cm values per scenario
-- Persist local data for repeat analysis workflows
-- View embedded charts directly in the desktop interface
+- Load a KovaaK’s stats folder and group runs by scenario
+- Compare best score, median, total plays, best/worst cm/360, and next sensitivity to test
+- View performance through embedded charts and a detailed table
+- Filter results using last 8 runs and min/max cm ranges
+- Export scenario analysis to PDF
+- Persist local app state for repeat analysis workflows
 
 ## Screenshots
 
 ### Main Analysis View
-Overview of scenario analysis, summary cards, and next-sensitivity recommendations.
-
-![Main Analysis View](assets/screenshots/main-analysis-view.png)
+![Main Analysis View](assets/screenshots/main.png)
 
 ### Chart View
-Embedded chart comparing best scores across tested cm/360 values.
+![Chart View](assets/screenshots/chart.png)
 
-![Chart View](assets/screenshots/chart-view.png)
+### Performance Table
+![Performance Table](assets/screenshots/table.png)
 
-### Filtering Workflow
-Sensitivity range filtering and analysis workflow for narrowing recommendations.
+## Installation
 
-![Filtering Workflow](assets/screenshots/filtering-workflow.png)
+### Option 1: Run packaged executable (Windows)
 
-### Sensitivity Table View
-Detailed table view with best score, median, total plays, and peak ranking data.
+Download the latest release and run:
 
-![Sensitivity Table View](assets/screenshots/sensitivity-table-view.png)
+```bash
+KovaaksSensTracker.exe
+```
+
+### Option 2: Run from source
+
+```bash
+py -m pip install -r requirements.txt
+py main.py
+```
+
+## Build (Windows)
+
+```bash
+py -m PyInstaller --noconfirm --onedir --windowed --icon=assets/app_icon.ico --add-data "assets/app_icon.ico;assets" --name "KovaaksSensTracker" main.py
+```
 
 ## Tech Stack
 
-- Python
-- tkinter
-- Matplotlib
+* Python
+* PySide6
+* Matplotlib
+* ReportLab
+* SQLite
+* PyInstaller
 
 ## Project Structure
 
 ```text
 kovaaks-sens-tracker/
   corporate_serf_tracker/
-    __init__.py
     analysis.py
-    app.py
     constants.py
     formatting.py
     parsing.py
     storage.py
+    ui/
   assets/
     screenshots/
+    app_icon.ico
   main.py
   requirements.txt
+```
+
+## Why I Built It
+
+The Corporate Serf method is based on the idea that training aim scenarios at different sensitivities in KovaaK’s can expose specific weaknesses.
+
+For example:
+
+* weaker low-sensitivity performance may indicate weaker shoulder-driven aiming
+* weaker high-sensitivity performance may point to weaker fingertip or fine-control aim
+
+The original workflow required manually entering results into a Google Sheet after every scenario run. This app was built as a desktop alternative to remove that friction and make sensitivity analysis faster, repeatable, and easier to interpret.
+
+## Notes
+
+Inspired by the Corporate Serf sensitivity method. This project focuses on reducing manual tracking and making sensitivity analysis easier to repeat and interpret.

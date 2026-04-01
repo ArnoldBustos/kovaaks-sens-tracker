@@ -399,7 +399,7 @@ class ScenarioTab(QWidget):
             {
                 "title": "BEST CROSSHAIR",
                 "value": summary_stats["best_crosshair_label"],
-                "value_style": "heroAccentValue",
+                "value_style": "heroAccentValueCompact",
                 "secondary_text": "",
                 "secondary_style": "statSecondaryText",
                 "allow_wrap": True,
@@ -640,8 +640,13 @@ class ScenarioTab(QWidget):
       #statCard {
         background: #16202c;
         border: 1px solid #344152;
-        min-height: 90px;
-        max-height: 110px;
+        min-height: 96px;
+      }
+
+      #heroAccentValueCompact {
+        color: #5fd6ff;
+        font-size: 18px;
+        font-weight: 800;
       }
 
       #statTitle {
