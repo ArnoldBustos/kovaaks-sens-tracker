@@ -471,6 +471,7 @@ QScrollBar::sub-page:horizontal {
     def _save_ui_state(self):
         self.storage["ui_state"] = self.state.to_persisted_dict()
         from corporate_serf_tracker.storage import save_data
+
         save_data(self.storage)
 
     def _attempt_default_load(self):
@@ -582,29 +583,55 @@ QScrollBar::sub-page:horizontal {
             self._sync_list_selection_state()
             return
 
-        if is_now_selected:
-            self.statusBar().showMessage(f"Selected {scenario_name}")
-        else:
-            self.statusBar().showMessage(f"Removed {scenario_name}")
-
         self.selected_count_label.setText(self.state.selected_count_label())
         self._save_ui_state()
-        self._rebuild_tabs()
+
+        if is_now_selected:
+            scenario_tab = self._create_scenario_tab(scenario_name)
+            tab_label = self._format_tab_name(scenario_name)
+            new_tab_index = self.tab_widget.addTab(scenario_tab, tab_label)
+            self.tab_widget.setCurrentIndex(new_tab_index)
+            self.statusBar().showMessage(f"Selected {scenario_name}")
+        else:
+            self._remove_tab_by_name(scenario_name)
+            self.statusBar().showMessage(f"Removed {scenario_name}")
+
+        self._update_main_panel_visibility()
         self._sync_list_selection_state()
+
+    def _remove_tab_by_name(self, scenario_name: str):
+        for tab_index in range(self.tab_widget.count()):
+            tab_widget = self.tab_widget.widget(tab_index)
+
+            if getattr(tab_widget, "scenario_name", None) == scenario_name:
+                widget_to_remove = self.tab_widget.widget(tab_index)
+                self.tab_widget.removeTab(tab_index)
+
+                if widget_to_remove is not None:
+                    widget_to_remove.deleteLater()
+                break
 
     def _handle_tab_close_requested(self, tab_index: int):
         if tab_index < 0:
             return
 
-        if tab_index >= len(self.state.selected_scenarios):
+        tab_widget = self.tab_widget.widget(tab_index)
+        scenario_name = getattr(tab_widget, "scenario_name", None)
+
+        if not scenario_name:
             return
 
-        scenario_name = self.state.selected_scenarios[tab_index]
         self.state.deselect_scenario(scenario_name)
+
+        widget_to_remove = self.tab_widget.widget(tab_index)
+        self.tab_widget.removeTab(tab_index)
+
+        if widget_to_remove is not None:
+            widget_to_remove.deleteLater()
 
         self.selected_count_label.setText(self.state.selected_count_label())
         self._save_ui_state()
-        self._rebuild_tabs()
+        self._update_main_panel_visibility()
         self._sync_list_selection_state()
         self.statusBar().showMessage(f"Closed {scenario_name}")
 
@@ -612,31 +639,37 @@ QScrollBar::sub-page:horizontal {
         self.tab_widget.clear()
 
         for scenario_name in self.state.selected_scenarios:
-            plays = self.state.all_scenarios.get(scenario_name, [])
-            assignments = self.storage.get("assignments", {}).get(scenario_name, {})
-            ranks = self.storage.get("ranks", {}).get(scenario_name, {})
-
-            scenario_tab = ScenarioTab(
-                scenario_name=scenario_name,
-                plays=plays,
-                assignments=assignments,
-                ranks=ranks,
-                app_state=self.state,
-                save_ui_state_callback=self._save_ui_state,
-            )
+            scenario_tab = self._create_scenario_tab(scenario_name)
             tab_label = self._format_tab_name(scenario_name)
             self.tab_widget.addTab(scenario_tab, tab_label)
 
         if self.state.active_tab_name:
             for tab_index in range(self.tab_widget.count()):
+                tab_widget = self.tab_widget.widget(tab_index)
                 if (
-                    self.state.selected_scenarios[tab_index]
+                    getattr(tab_widget, "scenario_name", None)
                     == self.state.active_tab_name
                 ):
                     self.tab_widget.setCurrentIndex(tab_index)
                     break
 
         self._update_main_panel_visibility()
+
+    def _create_scenario_tab(self, scenario_name: str) -> ScenarioTab:
+        plays = self.state.all_scenarios.get(scenario_name, [])
+        assignments = self.storage.get("assignments", {}).get(scenario_name, {})
+        ranks = self.storage.get("ranks", {}).get(scenario_name, {})
+
+        scenario_tab = ScenarioTab(
+            scenario_name=scenario_name,
+            plays=plays,
+            assignments=assignments,
+            ranks=ranks,
+            app_state=self.state,
+            save_ui_state_callback=self._save_ui_state,
+            parent=self.tab_widget,
+        )
+        return scenario_tab
 
     def _update_main_panel_visibility(self):
         has_selected_scenarios = len(self.state.selected_scenarios) > 0

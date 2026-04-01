@@ -14,8 +14,8 @@ from corporate_serf_tracker.formatting import fmt_score
 
 
 class SensitivityTableWidget(QWidget):
-    def __init__(self, by_cm_scores: dict):
-        super().__init__()
+    def __init__(self, by_cm_scores: dict, parent=None):
+        super().__init__(parent)
         self.by_cm_scores = by_cm_scores
 
         layout = QVBoxLayout()
@@ -23,7 +23,7 @@ class SensitivityTableWidget(QWidget):
         layout.setSpacing(0)
         self.setLayout(layout)
 
-        self.table = QTableWidget()
+        self.table = QTableWidget(self)
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(
             [
@@ -55,9 +55,7 @@ class SensitivityTableWidget(QWidget):
         horizontal_header.setSectionResizeMode(
             1, QHeaderView.ResizeMode.ResizeToContents
         )
-        horizontal_header.setSectionResizeMode(
-            2, QHeaderView.ResizeMode.Stretch
-        )
+        horizontal_header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         horizontal_header.setSectionResizeMode(
             3, QHeaderView.ResizeMode.ResizeToContents
         )
@@ -247,7 +245,7 @@ class SensitivityTableWidget(QWidget):
         is_best_row: bool,
         is_worst_row: bool,
     ) -> QWidget:
-        outer_widget = QWidget()
+        outer_widget = QWidget(self.table)
         outer_widget.setStyleSheet("background: transparent;")
         outer_widget.setSizePolicy(
             QSizePolicy.Policy.Expanding,
@@ -259,7 +257,7 @@ class SensitivityTableWidget(QWidget):
         outer_layout.setSpacing(0)
         outer_widget.setLayout(outer_layout)
 
-        track_widget = QWidget()
+        track_widget = QWidget(outer_widget)
         track_widget.setFixedHeight(8)
         track_widget.setMinimumWidth(140)
         track_widget.setSizePolicy(
@@ -306,7 +304,7 @@ class SensitivityTableWidget(QWidget):
         track_layout.setSpacing(0)
         track_widget.setLayout(track_layout)
 
-        fill_widget = QWidget()
+        fill_widget = QWidget(track_widget)
         fill_widget.setFixedHeight(8)
         fill_widget.setSizePolicy(
             QSizePolicy.Policy.Expanding,
@@ -320,7 +318,7 @@ class SensitivityTableWidget(QWidget):
             """
         )
 
-        spacer_widget = QWidget()
+        spacer_widget = QWidget(track_widget)
         spacer_widget.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Fixed,

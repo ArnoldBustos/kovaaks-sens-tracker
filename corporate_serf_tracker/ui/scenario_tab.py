@@ -35,8 +35,9 @@ class ScenarioTab(QWidget):
         ranks: dict,
         app_state,
         save_ui_state_callback,
+        parent=None,
     ):
-        super().__init__()
+        super().__init__(parent)
         self.scenario_name = scenario_name
         self.plays = plays
         self.assignments = assignments
@@ -61,12 +62,12 @@ class ScenarioTab(QWidget):
         outer_layout.setSpacing(0)
         self.setLayout(outer_layout)
 
-        scroll_area = QScrollArea()
+        scroll_area = QScrollArea(self)
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
 
-        scroll_content = QWidget()
+        scroll_content = QWidget(scroll_area)
         self.root_layout = QVBoxLayout()
         self.root_layout.setContentsMargins(16, 16, 16, 16)
         self.root_layout.setSpacing(6)
@@ -74,8 +75,8 @@ class ScenarioTab(QWidget):
 
         self.filter_row = self._build_filter_row()
 
-        self.overview_container = QWidget()
-        self.content_container = QWidget()
+        self.overview_container = QWidget(scroll_content)
+        self.content_container = QWidget(scroll_content)
 
         self.root_layout.addWidget(self.overview_container)
         self.root_layout.addWidget(self.filter_row)
@@ -85,7 +86,7 @@ class ScenarioTab(QWidget):
         outer_layout.addWidget(scroll_area)
 
     def _build_filter_row(self) -> QWidget:
-        container = QFrame()
+        container = QFrame(self)
         container.setObjectName("sectionCard")
 
         layout = QHBoxLayout()
@@ -93,30 +94,33 @@ class ScenarioTab(QWidget):
         layout.setSpacing(10)
         container.setLayout(layout)
 
-        heading_label = QLabel("FILTERS")
+        heading_label = QLabel("FILTERS", container)
         heading_label.setObjectName("sectionHeading")
 
-        self.last_8_checkbox = QCheckBox("Last 8 only")
+        self.last_8_checkbox = QCheckBox("Last 8 only", container)
         self.last_8_checkbox.stateChanged.connect(self._handle_filters_changed)
 
-        min_label = QLabel("Min cm")
+        min_label = QLabel("Min cm", container)
         min_label.setObjectName("filterLabel")
 
-        self.cm_min_input = QLineEdit()
+        self.cm_min_input = QLineEdit(container)
         self.cm_min_input.setPlaceholderText("e.g. 60")
         self.cm_min_input.setFixedWidth(90)
         self.cm_min_input.editingFinished.connect(self._handle_filters_changed)
 
-        max_label = QLabel("Max cm")
+        max_label = QLabel("Max cm", container)
         max_label.setObjectName("filterLabel")
 
-        self.cm_max_input = QLineEdit()
+        self.cm_max_input = QLineEdit(container)
         self.cm_max_input.setPlaceholderText("e.g. 80")
         self.cm_max_input.setFixedWidth(90)
         self.cm_max_input.editingFinished.connect(self._handle_filters_changed)
 
-        reset_button = QPushButton("Reset Filters")
+        reset_button = QPushButton("Reset Filters", container)
         reset_button.clicked.connect(self._reset_filters)
+
+        export_button = QPushButton("Export PDF", container)
+        export_button.clicked.connect(self._handle_export_pdf)
 
         layout.addWidget(heading_label)
         layout.addSpacing(8)
@@ -127,11 +131,7 @@ class ScenarioTab(QWidget):
         layout.addWidget(max_label)
         layout.addWidget(self.cm_max_input)
         layout.addWidget(reset_button)
-        export_button = QPushButton("Export PDF")
-        export_button.clicked.connect(self._handle_export_pdf)
-
         layout.addWidget(export_button)
-
         layout.addStretch(1)
 
         return container
@@ -210,7 +210,8 @@ class ScenarioTab(QWidget):
             message_box.setText(f"Saved PDF report to:\n{output_path}")
             message_box.setStandardButtons(QMessageBox.StandardButton.Ok)
 
-            message_box.setStyleSheet("""
+            message_box.setStyleSheet(
+                """
             QMessageBox {
             background-color: #0f1822;
             }
@@ -231,7 +232,8 @@ class ScenarioTab(QWidget):
             QPushButton:hover {
             color: #f5f7fa;
             }
-            """)
+            """
+            )
 
             message_box.exec()
         except Exception as error:
@@ -329,14 +331,18 @@ class ScenarioTab(QWidget):
                 else "▶ PERFORMANCE TABLE"
             )
 
-    def _build_section_toggle_button(self, text: str, click_handler) -> QPushButton:
-        toggle_button = QPushButton(text)
+    def _build_section_toggle_button(
+        self, text: str, click_handler, parent: QWidget = None
+    ) -> QPushButton:
+        toggle_button = QPushButton(text, parent or self)
         toggle_button.setObjectName("sectionToggleButton")
         toggle_button.clicked.connect(click_handler)
         return toggle_button
 
-    def _build_section_header_row(self, toggle_button: QPushButton) -> QWidget:
-        header_row = QWidget()
+    def _build_section_header_row(
+        self, toggle_button: QPushButton, parent: QWidget = None
+    ) -> QWidget:
+        header_row = QWidget(parent or self)
 
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(0, 0, 0, 0)
@@ -349,7 +355,7 @@ class ScenarioTab(QWidget):
         return header_row
 
     def _build_overview_section(self, summary_stats: dict) -> QWidget:
-        container = QFrame()
+        container = QFrame(self)
         container.setObjectName("sectionCard")
 
         layout = QVBoxLayout()
@@ -357,7 +363,7 @@ class ScenarioTab(QWidget):
         layout.setSpacing(12)
         container.setLayout(layout)
 
-        heading_label = QLabel("OVERVIEW")
+        heading_label = QLabel("OVERVIEW", container)
         heading_label.setObjectName("sectionHeading")
         layout.addWidget(heading_label)
 
@@ -445,6 +451,7 @@ class ScenarioTab(QWidget):
             column_index = stat_index % 4
 
             stat_card = self._build_stat_card(
+                parent=container,
                 title_text=stat_data["title"],
                 value_text=stat_data["value"],
                 value_style=stat_data["value_style"],
@@ -459,22 +466,22 @@ class ScenarioTab(QWidget):
         return container
 
     def _build_content_column(self, by_cm_scores: dict) -> QWidget:
-        container = QWidget()
+        container = QWidget(self)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
         container.setLayout(layout)
 
-        chart_card = self._build_chart_card(by_cm_scores)
-        table_card = self._build_table_card(by_cm_scores)
+        chart_card = self._build_chart_card(by_cm_scores, parent=container)
+        table_card = self._build_table_card(by_cm_scores, parent=container)
 
         layout.addWidget(chart_card)
         layout.addWidget(table_card)
 
         return container
 
-    def _build_chart_card(self, by_cm_scores: dict) -> QWidget:
-        container = QFrame()
+    def _build_chart_card(self, by_cm_scores: dict, parent: QWidget = None) -> QWidget:
+        container = QFrame(parent or self)
         container.setObjectName("sectionCard")
 
         layout = QVBoxLayout()
@@ -485,16 +492,22 @@ class ScenarioTab(QWidget):
         self.chart_toggle_button = self._build_section_toggle_button(
             "▼ CHART" if self.is_chart_expanded else "▶ CHART",
             self._toggle_chart_section,
+            parent=container,
         )
-        header_row = self._build_section_header_row(self.chart_toggle_button)
+        header_row = self._build_section_header_row(
+            self.chart_toggle_button, parent=container
+        )
 
-        self.chart_content_widget = QWidget()
+        self.chart_content_widget = QWidget(container)
         chart_content_layout = QVBoxLayout()
         chart_content_layout.setContentsMargins(0, 0, 0, 0)
         chart_content_layout.setSpacing(0)
         self.chart_content_widget.setLayout(chart_content_layout)
 
-        self.chart_widget = ScoreChartWidget(by_cm_scores=by_cm_scores)
+        self.chart_widget = ScoreChartWidget(
+            by_cm_scores=by_cm_scores,
+            parent=self.chart_content_widget,
+        )
         self.chart_widget.setMinimumHeight(260)
 
         chart_content_layout.addWidget(self.chart_widget)
@@ -505,8 +518,8 @@ class ScenarioTab(QWidget):
 
         return container
 
-    def _build_table_card(self, by_cm_scores: dict) -> QWidget:
-        container = QFrame()
+    def _build_table_card(self, by_cm_scores: dict, parent: QWidget = None) -> QWidget:
+        container = QFrame(parent or self)
         container.setObjectName("tableSectionCard")
 
         layout = QVBoxLayout()
@@ -517,16 +530,22 @@ class ScenarioTab(QWidget):
         self.table_toggle_button = self._build_section_toggle_button(
             "▼ PERFORMANCE TABLE" if self.is_table_expanded else "▶ PERFORMANCE TABLE",
             self._toggle_table_section,
+            parent=container,
         )
-        header_row = self._build_section_header_row(self.table_toggle_button)
+        header_row = self._build_section_header_row(
+            self.table_toggle_button, parent=container
+        )
 
-        self.table_content_widget = QWidget()
+        self.table_content_widget = QWidget(container)
         table_content_layout = QVBoxLayout()
         table_content_layout.setContentsMargins(0, 0, 0, 0)
         table_content_layout.setSpacing(0)
         self.table_content_widget.setLayout(table_content_layout)
 
-        table_widget = SensitivityTableWidget(by_cm_scores=by_cm_scores)
+        table_widget = SensitivityTableWidget(
+            by_cm_scores=by_cm_scores,
+            parent=self.table_content_widget,
+        )
         table_widget.setMinimumHeight(260)
 
         table_content_layout.addWidget(table_widget)
@@ -545,8 +564,9 @@ class ScenarioTab(QWidget):
         secondary_text: str = "",
         secondary_style: str = "statSecondaryText",
         allow_wrap: bool = False,
+        parent: QWidget = None,
     ) -> QWidget:
-        container = QFrame()
+        container = QFrame(parent or self)
         container.setObjectName("statCard")
 
         layout = QVBoxLayout()
@@ -554,10 +574,10 @@ class ScenarioTab(QWidget):
         layout.setSpacing(3)
         container.setLayout(layout)
 
-        title_label = QLabel(title_text)
+        title_label = QLabel(title_text, container)
         title_label.setObjectName("statTitle")
 
-        value_label = QLabel(value_text)
+        value_label = QLabel(value_text, container)
         value_label.setObjectName(value_style)
         value_label.setWordWrap(allow_wrap)
         value_label.setTextInteractionFlags(
@@ -568,7 +588,7 @@ class ScenarioTab(QWidget):
         layout.addWidget(value_label)
 
         if secondary_text:
-            secondary_label = QLabel(secondary_text)
+            secondary_label = QLabel(secondary_text, container)
             secondary_label.setObjectName(secondary_style)
             secondary_label.setWordWrap(False)
             layout.addWidget(secondary_label)
@@ -588,17 +608,17 @@ class ScenarioTab(QWidget):
       QScrollArea > QWidget > QWidget {
         background: #0b0f14;
       }
-      
+
       #tableSectionCard {
         background: #131a24;
         border: none;
-        }
+      }
 
-        #sectionHeadingAccent {
+      #sectionHeadingAccent {
         color: #81ecff;
         font-size: 11px;
         font-weight: 700;
-        }
+      }
 
       #sectionCard {
         background: #0f1822;

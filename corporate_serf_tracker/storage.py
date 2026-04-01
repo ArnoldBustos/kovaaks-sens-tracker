@@ -2,12 +2,12 @@ import json
 import sqlite3
 from pathlib import Path
 
-from .constants import DATA_FILE
+from .constants import DATABASE_FILE
 
 
 class StorageService:
     def __init__(self):
-        self.database_path = Path(DATA_FILE).with_suffix(".db")
+        self.database_path = DATABASE_FILE
         self._initialize_database()
 
     def _connect(self):

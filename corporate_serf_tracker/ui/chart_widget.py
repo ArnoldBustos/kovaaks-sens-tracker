@@ -58,8 +58,8 @@ class ScrollPassthroughCanvas(FigureCanvasQTAgg):
 
 
 class ScoreChartWidget(QWidget):
-    def __init__(self, by_cm_scores: dict):
-        super().__init__()
+    def __init__(self, by_cm_scores: dict, parent=None):
+        super().__init__(parent)
         self.by_cm_scores = by_cm_scores
 
         root_layout = QVBoxLayout()
@@ -68,9 +68,9 @@ class ScoreChartWidget(QWidget):
 
         self.figure = Figure(figsize=(7.6, 4.9), dpi=100)
         self.canvas = ScrollPassthroughCanvas(self.figure)
+        self.canvas.setParent(self)
 
         root_layout.addWidget(self.canvas)
-
         self._build_chart()
 
     def _build_chart(self):
@@ -324,8 +324,8 @@ class ScoreChartWidget(QWidget):
 
     def save_chart_image(self, output_path: str):
         self.figure.savefig(
-        output_path,
-        dpi=200,
-        facecolor=self.figure.get_facecolor(),
-        bbox_inches="tight",
+            output_path,
+            dpi=200,
+            facecolor=self.figure.get_facecolor(),
+            bbox_inches="tight",
         )
