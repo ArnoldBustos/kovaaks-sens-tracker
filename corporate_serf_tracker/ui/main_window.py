@@ -8,9 +8,6 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
-    QListWidget,
-    QListWidgetItem,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -25,10 +22,13 @@ from corporate_serf_tracker.constants import DEFAULT_STATS_PATH, MAX_SELECTED
 from corporate_serf_tracker.parsing import load_folder
 from corporate_serf_tracker.services.app_state import AppState
 from corporate_serf_tracker.storage import load_data
+from corporate_serf_tracker.ui.sidebar_panel import SidebarPanel
 from corporate_serf_tracker.ui.scenario_tab import ScenarioTab
 
 
+# MainWindow coordinates app-level loading, sidebar actions, and scenario tabs.
 class MainWindow(QMainWindow):
+    # __init__ restores persisted state and builds the main application shell.
     def __init__(self):
         super().__init__()
         self.state = AppState(max_selected=MAX_SELECTED)
@@ -36,7 +36,6 @@ class MainWindow(QMainWindow):
 
         persisted_ui_state = self.storage.get("ui_state", {})
         self.state.apply_persisted_dict(persisted_ui_state)
-        self.visible_scenario_names = []
         self.search_placeholder_text = "Search scenarios..."
 
         self.setWindowTitle("Kovaaks Sensitivity Performance Tracker")
@@ -47,15 +46,18 @@ class MainWindow(QMainWindow):
         self._apply_styles()
         self._attempt_default_load()
 
+    # _build_window creates the top-level window structure.
     def _build_window(self):
         self._build_status_bar()
         self._build_central_layout()
 
+    # _build_status_bar creates the footer status messaging area.
     def _build_status_bar(self):
         status_bar = QStatusBar()
         status_bar.showMessage("Ready")
         self.setStatusBar(status_bar)
 
+    # _build_menu defines the legacy menu actions for folder loading and refresh.
     def _build_menu(self):
         file_menu = self.menuBar().addMenu("File")
 
@@ -67,6 +69,7 @@ class MainWindow(QMainWindow):
         refresh_action.triggered.connect(self._refresh)
         file_menu.addAction(refresh_action)
 
+    # _build_central_layout creates the top bar, sidebar, and main panel split view.
     def _build_central_layout(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -98,6 +101,7 @@ class MainWindow(QMainWindow):
 
         root_layout.addWidget(main_splitter, 1)
 
+    # _build_top_bar creates the title and folder controls above the main split view.
     def _build_top_bar(self) -> QWidget:
         top_bar = QFrame()
         top_bar.setObjectName("topBar")
@@ -146,47 +150,15 @@ class MainWindow(QMainWindow):
 
         return top_bar
 
+    # _build_sidebar creates the modular sidebar panel used for search and favorites.
     def _build_sidebar(self) -> QWidget:
-        sidebar = QFrame()
-        sidebar.setObjectName("sidebar")
-        sidebar.setMinimumWidth(280)
-        sidebar.setMaximumWidth(380)
+        self.sidebar_panel = SidebarPanel(self.search_placeholder_text, self)
+        self.sidebar_panel.refresh_requested.connect(self._refresh_sidebar)
+        self.sidebar_panel.scenario_clicked.connect(self._handle_scenario_clicked)
+        self.sidebar_panel.favorite_toggled.connect(self._handle_favorite_toggled)
+        return self.sidebar_panel
 
-        layout = QVBoxLayout()
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
-        sidebar.setLayout(layout)
-
-        header_label = QLabel("SCENARIOS")
-        header_label.setObjectName("sectionHeader")
-
-        self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText(self.search_placeholder_text)
-        self.search_input.textChanged.connect(self._populate_scenario_list)
-
-        self.selected_count_label = QLabel(self.state.selected_count_label())
-        self.selected_count_label.setObjectName("selectedCountLabel")
-        self.selected_count_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-
-        self.scenario_count_label = QLabel("0 scenarios")
-        self.scenario_count_label.setObjectName("scenarioCountLabel")
-
-        layout.addWidget(header_label)
-        layout.addWidget(self.search_input)
-        layout.addWidget(self.selected_count_label)
-        layout.addWidget(self.scenario_count_label)
-
-        divider = QFrame()
-        divider.setObjectName("dividerLine")
-        divider.setFrameShape(QFrame.Shape.HLine)
-        layout.addWidget(divider)
-
-        self.scenario_list_widget = QListWidget()
-        self.scenario_list_widget.itemClicked.connect(self._handle_scenario_clicked)
-        layout.addWidget(self.scenario_list_widget, 1)
-
-        return sidebar
-
+    # _build_main_panel creates the tab container and empty state region.
     def _build_main_panel(self) -> QWidget:
         self.main_panel = QFrame()
         self.main_panel.setObjectName("mainPanel")
@@ -210,6 +182,7 @@ class MainWindow(QMainWindow):
         self._update_main_panel_visibility()
         return self.main_panel
 
+    # _build_empty_state creates the placeholder shown when no scenarios are selected.
     def _build_empty_state(self) -> QWidget:
         container = QWidget()
         layout = QVBoxLayout()
@@ -238,6 +211,7 @@ class MainWindow(QMainWindow):
 
         return container
 
+    # _apply_styles applies the shared application stylesheet for all widgets.
     def _apply_styles(self):
         self.setStyleSheet(
             """
@@ -328,6 +302,19 @@ class MainWindow(QMainWindow):
         font-size: 12px;
       }
 
+      #sectionSubHeader {
+        color: #7e8b99;
+        font-size: 10px;
+        font-weight: 700;
+        padding-top: 4px;
+      }
+
+      #sectionEmptyLabel {
+        color: #627082;
+        font-size: 11px;
+        padding: 2px 0 6px 0;
+      }
+
       #dividerLine {
         background: #344152;
         color: #344152;
@@ -358,7 +345,8 @@ class MainWindow(QMainWindow):
         padding: 7px 8px;
       }
 
-      QListWidget {
+      QListWidget,
+      QListWidget#scenarioSectionList {
         background: #0f1822;
         color: #f5f7fa;
         border: 1px solid #344152;
@@ -366,14 +354,67 @@ class MainWindow(QMainWindow):
         padding: 4px;
       }
 
-      QListWidget::item {
+      QListWidget::item,
+      QListWidget#scenarioSectionList::item {
         padding: 8px 10px;
         margin: 1px 0;
       }
 
-      QListWidget::item:selected {
+      QListWidget::item:selected,
+      QListWidget#scenarioSectionList::item:selected {
         background: #22334a;
         color: #3fbcde;
+      }
+
+      #scenarioRow {
+        background: #15202d;
+        border: 1px solid #1f2b39;
+      }
+
+      #scenarioRow:hover {
+        border: 1px solid #3fbcde;
+      }
+
+      #scenarioRow[selectedState="true"] {
+        background: #22334a;
+        border: 1px solid #3fbcde;
+      }
+
+      #scenarioRowName {
+        color: #f5f7fa;
+      }
+
+      #scenarioRowCount {
+        color: #aab4c0;
+        min-width: 24px;
+        padding-left: 10px;
+      }
+
+      QPushButton#favoriteToggleButton {
+        background: transparent;
+        min-width: 16px;
+        max-width: 16px;
+        min-height: 16px;
+        max-height: 16px;
+        padding: 0;
+        font-size: 14px;
+        font-weight: 700;
+        border: none;
+      }
+
+      QPushButton#favoriteToggleButton[favoriteState="true"] {
+        color: #f0d24a;
+        border: none;
+      }
+
+      QPushButton#favoriteToggleButton[favoriteState="false"] {
+        color: #7e8b99;
+        border: none;
+      }
+
+      QPushButton#favoriteToggleButton:hover {
+        color: #f0d24a;
+        border: none;
       }
 
       QTabWidget::pane {
@@ -468,12 +509,14 @@ QScrollBar::sub-page:horizontal {
       """
         )
 
+    # _save_ui_state persists the latest UI state to the storage service.
     def _save_ui_state(self):
         self.storage["ui_state"] = self.state.to_persisted_dict()
         from corporate_serf_tracker.storage import save_data
 
         save_data(self.storage)
 
+    # _attempt_default_load reopens the previous or default stats folder when possible.
     def _attempt_default_load(self):
         saved_folder_path = self.state.folder_path
 
@@ -485,6 +528,7 @@ QScrollBar::sub-page:horizontal {
             self.state.set_folder_path(DEFAULT_STATS_PATH)
             self._load_folder()
 
+    # _select_folder prompts the user for a new stats folder and reloads the app state.
     def _select_folder(self):
         start_directory = DEFAULT_STATS_PATH
         if not os.path.exists(start_directory):
@@ -503,6 +547,7 @@ QScrollBar::sub-page:horizontal {
         self._save_ui_state()
         self._load_folder()
 
+    # _refresh reloads the currently selected stats folder or prompts for one.
     def _refresh(self):
         if not self.state.folder_path:
             self._select_folder()
@@ -510,6 +555,7 @@ QScrollBar::sub-page:horizontal {
 
         self._load_folder()
 
+    # _load_folder parses the active stats folder and refreshes the sidebar and tabs.
     def _load_folder(self):
         if not self.state.folder_path:
             return
@@ -530,49 +576,21 @@ QScrollBar::sub-page:horizontal {
             return
 
         self.state.set_scenarios(loaded_scenarios)
+        self._save_ui_state()
 
-        folder_name = Path(self.state.folder_path).name
         scenario_count = len(self.state.all_scenarios)
         self.folder_label.setText(f"{scenario_count} scenarios")
         self.statusBar().showMessage(f"Loaded {scenario_count} scenarios")
 
-        self._populate_scenario_list()
+        self._refresh_sidebar()
         self._rebuild_tabs()
 
-    def _populate_scenario_list(self):
-        search_text = self.search_input.text()
-        self.visible_scenario_names = self.state.filtered_scenario_names(search_text)
+    # _refresh_sidebar repopulates the modular sidebar from the current AppState.
+    def _refresh_sidebar(self):
+        self.sidebar_panel.refresh(self.state)
 
-        self.scenario_list_widget.clear()
-
-        for scenario_name in self.visible_scenario_names:
-            play_count = len(self.state.all_scenarios.get(scenario_name, []))
-            item_text = f"{scenario_name} ({play_count})"
-
-            list_item = QListWidgetItem(item_text)
-            list_item.setData(Qt.ItemDataRole.UserRole, scenario_name)
-
-            self.scenario_list_widget.addItem(list_item)
-
-        self.scenario_count_label.setText(
-            self.state.scenario_count_label(len(self.visible_scenario_names))
-        )
-        self.selected_count_label.setText(self.state.selected_count_label())
-        self._sync_list_selection_state()
-
-    def _sync_list_selection_state(self):
-        for item_index in range(self.scenario_list_widget.count()):
-            list_item = self.scenario_list_widget.item(item_index)
-            scenario_name = list_item.data(Qt.ItemDataRole.UserRole)
-
-            if scenario_name in self.state.selected_scenarios:
-                list_item.setSelected(True)
-            else:
-                list_item.setSelected(False)
-
-    def _handle_scenario_clicked(self, list_item: QListWidgetItem):
-        scenario_name = list_item.data(Qt.ItemDataRole.UserRole)
-
+    # _handle_scenario_clicked reuses the existing tab-selection rules for sidebar clicks.
+    def _handle_scenario_clicked(self, scenario_name: str):
         selection_succeeded, is_now_selected = self.state.toggle_scenario(scenario_name)
         if not selection_succeeded:
             QMessageBox.information(
@@ -580,10 +598,9 @@ QScrollBar::sub-page:horizontal {
                 "Selection Limit",
                 f"Max {self.state.max_selected} scenarios. Remove one first.",
             )
-            self._sync_list_selection_state()
+            self._refresh_sidebar()
             return
 
-        self.selected_count_label.setText(self.state.selected_count_label())
         self._save_ui_state()
 
         if is_now_selected:
@@ -597,8 +614,21 @@ QScrollBar::sub-page:horizontal {
             self.statusBar().showMessage(f"Removed {scenario_name}")
 
         self._update_main_panel_visibility()
-        self._sync_list_selection_state()
+        self._refresh_sidebar()
 
+    # _handle_favorite_toggled updates favorite state from the modular sidebar rows.
+    def _handle_favorite_toggled(self, scenario_name: str, is_favorite: bool):
+        if is_favorite:
+            self.state.add_favorite(scenario_name)
+            self.statusBar().showMessage(f"Pinned {scenario_name}")
+        else:
+            self.state.remove_favorite(scenario_name)
+            self.statusBar().showMessage(f"Unpinned {scenario_name}")
+
+        self._save_ui_state()
+        self._refresh_sidebar()
+
+    # _remove_tab_by_name closes the tab associated with a scenario name.
     def _remove_tab_by_name(self, scenario_name: str):
         for tab_index in range(self.tab_widget.count()):
             tab_widget = self.tab_widget.widget(tab_index)
@@ -611,6 +641,7 @@ QScrollBar::sub-page:horizontal {
                     widget_to_remove.deleteLater()
                 break
 
+    # _handle_tab_close_requested removes a tab and updates the shared selection state.
     def _handle_tab_close_requested(self, tab_index: int):
         if tab_index < 0:
             return
@@ -629,12 +660,12 @@ QScrollBar::sub-page:horizontal {
         if widget_to_remove is not None:
             widget_to_remove.deleteLater()
 
-        self.selected_count_label.setText(self.state.selected_count_label())
         self._save_ui_state()
         self._update_main_panel_visibility()
-        self._sync_list_selection_state()
+        self._refresh_sidebar()
         self.statusBar().showMessage(f"Closed {scenario_name}")
 
+    # _rebuild_tabs recreates tabs from persisted selection state after a folder reload.
     def _rebuild_tabs(self):
         self.tab_widget.clear()
 
@@ -654,7 +685,9 @@ QScrollBar::sub-page:horizontal {
                     break
 
         self._update_main_panel_visibility()
+        self._refresh_sidebar()
 
+    # _create_scenario_tab builds one ScenarioTab from loaded plays and stored metadata.
     def _create_scenario_tab(self, scenario_name: str) -> ScenarioTab:
         plays = self.state.all_scenarios.get(scenario_name, [])
         assignments = self.storage.get("assignments", {}).get(scenario_name, {})
@@ -671,11 +704,13 @@ QScrollBar::sub-page:horizontal {
         )
         return scenario_tab
 
+    # _update_main_panel_visibility switches between the empty state and tab view.
     def _update_main_panel_visibility(self):
         has_selected_scenarios = len(self.state.selected_scenarios) > 0
         self.empty_state_container.setVisible(not has_selected_scenarios)
         self.tab_widget.setVisible(has_selected_scenarios)
 
+    # _handle_tab_changed persists the currently focused scenario tab.
     def _handle_tab_changed(self, tab_index: int):
         if tab_index < 0:
             return
@@ -686,6 +721,7 @@ QScrollBar::sub-page:horizontal {
         self.state.active_tab_name = self.state.selected_scenarios[tab_index]
         self._save_ui_state()
 
+    # _format_tab_name trims long scenario names for the tab bar.
     def _format_tab_name(self, scenario_name: str) -> str:
         max_length = 28
         if len(scenario_name) <= max_length:
